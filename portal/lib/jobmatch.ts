@@ -39,7 +39,7 @@ export function parseJobMatchResponse(output: string): JobMatchResult {
 }
 
 export function scoreJobMatch(slug: string): JobMatchResult {
-  const projectDir = process.cwd()
+  const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
 
   const profile = fs.readFileSync(
     path.join(projectDir, 'profile/base_profile.md'),

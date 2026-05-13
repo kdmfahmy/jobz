@@ -111,7 +111,7 @@ export function parseMissingKeywords(log: string): string[] {
 }
 
 export function spawnPipeline(applicationId: number, jdInput: string): void {
-  const projectDir = process.cwd()
+  const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
   const applyMd = fs.readFileSync(
     path.join(projectDir, '.claude/commands/apply.md'),
     'utf-8'
