@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Link from 'next/link'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -20,8 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               J
             </div>
             <nav className="flex flex-col gap-3 mt-4">
-              <a href="/" className="w-5 h-1 bg-blue-500 rounded" title="Board" />
-              <a href="/new" className="w-5 h-1 bg-slate-700 rounded" title="New Application" />
+              <Link href="/" className="w-5 h-1 bg-blue-500 rounded" title="Board" />
+              <Link href="/new" className="w-5 h-1 bg-slate-700 rounded" title="New Application" />
             </nav>
           </aside>
           {/* Main */}
