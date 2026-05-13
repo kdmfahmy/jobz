@@ -121,7 +121,7 @@ export function spawnPipeline(applicationId: number, jdInput: string): void {
 
   const child = spawn(
     'claude',
-    ['-p', prompt, '--dangerouslySkipPermissions'],
+    ['-p', prompt],
     {
       cwd: projectDir,
       detached: true,

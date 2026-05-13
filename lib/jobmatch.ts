@@ -59,7 +59,7 @@ export function scoreJobMatch(slug: string): JobMatchResult {
     .replace('{BRIEF}', brief)
 
   const output = execSync(
-    `claude -p ${JSON.stringify(prompt)} --dangerouslySkipPermissions`,
+    `claude -p ${JSON.stringify(prompt)}`,
     { cwd: projectDir, encoding: 'utf-8', timeout: 60_000 }
   )
 
