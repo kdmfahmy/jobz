@@ -69,10 +69,9 @@ export function parsePipelineSteps(log: string): PipelineStep[] {
 }
 
 export function parseAtsResult(log: string): AtsResult | null {
-  const scoreMatch = log.match(/ATS SCORE:\s*(\d+)\/100/)
-  if (!scoreMatch) return null
-
-  const score = parseInt(scoreMatch[1])
+  const scoreMatches = [...log.matchAll(/ATS SCORE:\s*(\d+)\/100/g)]
+  if (!scoreMatches.length) return null
+  const score = parseInt(scoreMatches[scoreMatches.length - 1][1])
 
   const n = (pattern: RegExp) => {
     const m = log.match(pattern)

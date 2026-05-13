@@ -1,5 +1,5 @@
 // lib/jobmatch.ts
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
@@ -58,8 +58,9 @@ export function scoreJobMatch(slug: string): JobMatchResult {
     .replace('{PROFILE}', profile)
     .replace('{BRIEF}', brief)
 
-  const output = execSync(
-    `claude -p ${JSON.stringify(prompt)}`,
+  const output = execFileSync(
+    'claude',
+    ['-p', prompt],
     { cwd: projectDir, encoding: 'utf-8', timeout: 60_000 }
   )
 

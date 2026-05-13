@@ -4,6 +4,8 @@ import { getApplication, updateApplication } from '@/lib/db'
 import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords } from '@/lib/pipeline'
 import { scoreJobMatch } from '@/lib/jobmatch'
 
+const scoringInFlight = new Set<number>()
+
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const app = getApplication(Number(id))
@@ -14,7 +16,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const missingKeywords = parseMissingKeywords(app.log)
 
   // Detect completion and finalize scores if not yet done
-  if (app.status === 'generating' && app.log.includes('APPLICATION:')) {
+  if (app.status === 'generating' && app.log.includes('APPLICATION:') && !scoringInFlight.has(app.id)) {
+    scoringInFlight.add(app.id)
     const atsResult = parseAtsResult(app.log)
     if (atsResult) {
       try {
@@ -35,8 +38,18 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
           ats_breakdown: JSON.stringify(atsResult.breakdown),
           iterations: JSON.stringify(atsResult.iterations),
         })
+      } finally {
+        scoringInFlight.delete(app.id)
       }
+    } else {
+      scoringInFlight.delete(app.id)
     }
+  }
+
+  // Detect pipeline failure — prevent stuck 'generating' status
+  const exitMatch = app.log.match(/\[PIPELINE_EXIT:(\d+)\]/)
+  if (app.status === 'generating' && exitMatch && exitMatch[1] !== '0') {
+    updateApplication(app.id, { status: 'generated' })
   }
 
   const freshApp = getApplication(Number(id))

@@ -43,23 +43,25 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           ← Back to Board
         </Link>
         <div className="flex gap-2 items-center">
-          <form action={updateStatus} className="flex gap-1.5 items-center">
-            <select
-              name="status"
-              defaultValue={app.status}
-              className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-            >
-              {STATUS_OPTIONS.map(s => (
-                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
-            >
-              Update
-            </button>
-          </form>
+          {app.status !== 'generating' && (
+            <form action={updateStatus} className="flex gap-1.5 items-center">
+              <select
+                name="status"
+                defaultValue={app.status}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+              >
+                {STATUS_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                Update
+              </button>
+            </form>
+          )}
           {app.ats_score !== null && (
             <a
               href={`/output/${app.slug}_cv.pdf`}
