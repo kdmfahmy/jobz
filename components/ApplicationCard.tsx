@@ -20,7 +20,7 @@ export function ApplicationCard({ app }: { app: Application }) {
       <div className="bg-slate-800 border border-slate-700 rounded-md p-3 mb-2 hover:border-blue-500 transition-colors cursor-pointer">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 bg-slate-600 rounded flex items-center justify-center text-xs font-bold text-slate-300 flex-shrink-0">
-            {app.company[0].toUpperCase()}
+            {(app.company[0] ?? '?').toUpperCase()}
           </div>
           <div className="min-w-0">
             <div className="text-xs font-semibold text-slate-100 truncate">{app.role}</div>

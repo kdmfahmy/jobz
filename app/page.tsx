@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { listApplications, ApplicationStatus } from '@/lib/db'
 import { KanbanColumn } from '@/components/KanbanColumn'
 
+export const dynamic = 'force-dynamic'
+
 const COLUMNS: ApplicationStatus[] = [
   'generating', 'generated', 'applied', 'interview', 'offer', 'rejected',
 ]

@@ -8,7 +8,7 @@ import { PipelineStep } from '@/lib/pipeline'
 
 interface StatusResponse {
   id: number
-  status: string
+  status: 'generating' | 'generated' | 'applied' | 'interview' | 'offer' | 'rejected'
   steps: PipelineStep[]
   currentAtsScore: number | null
   missingKeywords: string[]
@@ -22,7 +22,9 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
 
   // Resolve params (Promise in Next.js 15+)
   useEffect(() => {
-    params.then(p => setId(p.id))
+    let cancelled = false
+    params.then(p => { if (!cancelled) setId(p.id) })
+    return () => { cancelled = true }
   }, [params])
 
   // Fetch basic app info once id is resolved
@@ -37,21 +39,29 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
   // Poll status every 2 seconds
   useEffect(() => {
     if (!id) return
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval>
+
     const poll = async () => {
       try {
         const res = await fetch(`/api/applications/${id}/status`)
         if (!res.ok) return
         const data: StatusResponse = await res.json()
+        if (cancelled) return
         setStatusData(data)
         if (data.status === 'generated') {
+          clearInterval(intervalId)
           router.push(`/applications/${id}`)
         }
       } catch {}
     }
 
     poll()
-    const interval = setInterval(poll, 2000)
-    return () => clearInterval(interval)
+    intervalId = setInterval(poll, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+    }
   }, [id, router])
 
   return (

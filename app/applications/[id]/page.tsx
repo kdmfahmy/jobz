@@ -14,19 +14,25 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const app = getApplication(Number(id))
   if (!app) notFound()
 
-  const atsBreakdown: AtsBreakdown | null = app.ats_breakdown
-    ? JSON.parse(app.ats_breakdown)
-    : null
-  const jobMatchBreakdown: JobMatchBreakdown | null = app.job_match_breakdown
-    ? JSON.parse(app.job_match_breakdown)
-    : null
-  const iterations: number[] = app.iterations ? JSON.parse(app.iterations) : []
+  let atsBreakdown: AtsBreakdown | null = null
+  let jobMatchBreakdown: JobMatchBreakdown | null = null
+  let iterations: number[] = []
+  try {
+    if (app.ats_breakdown) atsBreakdown = JSON.parse(app.ats_breakdown)
+    if (app.job_match_breakdown) jobMatchBreakdown = JSON.parse(app.job_match_breakdown)
+    if (app.iterations) iterations = JSON.parse(app.iterations)
+  } catch {}
 
   async function updateStatus(formData: FormData) {
     'use server'
     const { updateApplication } = await import('@/lib/db')
+    const { revalidatePath } = await import('next/cache')
     const status = formData.get('status') as string
-    updateApplication(Number(id), { status: status as 'applied' | 'interview' | 'offer' | 'rejected' | 'generated' })
+    const validStatuses = ['generated', 'applied', 'interview', 'offer', 'rejected'] as const
+    if (!validStatuses.includes(status as typeof validStatuses[number])) return
+    updateApplication(Number(id), { status: status as typeof validStatuses[number] })
+    revalidatePath('/')
+    revalidatePath(`/applications/${id}`)
   }
 
   return (
@@ -58,6 +64,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             <a
               href={`/output/${app.slug}_cv.pdf`}
               target="_blank"
+              rel="noopener noreferrer"
               className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
               Open CV PDF
@@ -69,7 +76,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       {/* Job identity */}
       <div className="flex items-center gap-3 mb-5">
         <div className="w-11 h-11 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center text-lg font-black text-slate-400 flex-shrink-0">
-          {app.company[0].toUpperCase()}
+          {(app.company[0] ?? '?').toUpperCase()}
         </div>
         <div>
           <h1 className="text-lg font-black text-slate-100">{app.role}</h1>
