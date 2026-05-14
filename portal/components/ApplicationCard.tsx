@@ -1,6 +1,7 @@
 // components/ApplicationCard.tsx
 import Link from 'next/link'
 import { Application } from '@/lib/db'
+import { getStalledState } from '@/lib/pipeline'
 
 function scoreBadgeColor(score: number | null, type: 'ats' | 'match') {
   if (score === null) return 'bg-slate-700 text-slate-400'
@@ -15,6 +16,8 @@ function scoreBadgeColor(score: number | null, type: 'ats' | 'match') {
 }
 
 export function ApplicationCard({ app }: { app: Application }) {
+  const stalledState = getStalledState(app)
+
   return (
     <Link href={`/applications/${app.id}`}>
       <div className="bg-slate-800 border border-slate-700 rounded-md p-3 mb-2 hover:border-blue-500 transition-colors cursor-pointer">
@@ -28,10 +31,26 @@ export function ApplicationCard({ app }: { app: Application }) {
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {app.status === 'generating' ? (
-            <span className="text-xs bg-blue-900 text-blue-300 px-1.5 py-0.5 rounded animate-pulse">
-              Generating...
+          {app.status === 'pending' ? (
+            <span className="text-xs bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">
+              Ready to generate
             </span>
+          ) : app.status === 'generating' ? (
+            <>
+              <span className="text-xs bg-blue-900 text-blue-300 px-1.5 py-0.5 rounded animate-pulse">
+                Generating...
+              </span>
+              {stalledState === 'stalled' && (
+                <span className="text-xs bg-amber-900 text-amber-300 px-1.5 py-0.5 rounded">
+                  Stalled
+                </span>
+              )}
+              {stalledState === 'crashed' && (
+                <span className="text-xs bg-red-900 text-red-300 px-1.5 py-0.5 rounded">
+                  Crashed
+                </span>
+              )}
+            </>
           ) : (
             <>
               <span className={`text-xs px-1.5 py-0.5 rounded ${scoreBadgeColor(app.ats_score, 'ats')}`}>

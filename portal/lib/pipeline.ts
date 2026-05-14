@@ -24,6 +24,19 @@ export interface AtsResult {
   iterations: number[]
 }
 
+export const STALE_THRESHOLD_MS = 15 * 60 * 1000
+
+export type StalledState = 'running' | 'stalled' | 'crashed'
+
+export function getStalledState(app: { status: string; log: string; updated_at: string }): StalledState | null {
+  if (app.status !== 'generating') return null
+  const exitMatch = app.log.match(/\[PIPELINE_EXIT:(\d+)\]/)
+  if (exitMatch && exitMatch[1] !== '0') return 'crashed'
+  const updatedAt = new Date(app.updated_at.replace(' ', 'T') + 'Z').getTime()
+  if (Date.now() - updatedAt > STALE_THRESHOLD_MS) return 'stalled'
+  return 'running'
+}
+
 export function parsePipelineSteps(log: string): PipelineStep[] {
   const steps: PipelineStep[] = [
     { name: 'Job Analyzed', status: 'pending' },
@@ -110,17 +123,21 @@ export function parseMissingKeywords(log: string): string[] {
   return [...new Set(missing)]
 }
 
-export function spawnPipeline(applicationId: number, jdInput: string): void {
+
+export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
   const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
   const applyMd = fs.readFileSync(
     path.join(projectDir, '.claude/commands/apply.md'),
     'utf-8'
   )
-  const prompt = applyMd.replace(/\$ARGUMENTS/g, jdInput)
+  const prompt = applyMd
+    .replace(/\$ARGUMENTS/g, jdInput)
+    .replace(/\$WEB_RESEARCH/g, webResearch ? 'enabled' : 'disabled')
+    .replace(/\$SKIP_ANALYSIS/g, skipAnalysis ? 'true' : 'false')
 
   const child = spawn(
     'claude',
-    ['-p', prompt],
+    ['--dangerously-skip-permissions', '-p', prompt],
     {
       cwd: projectDir,
       detached: true,

@@ -1,10 +1,12 @@
 // app/applications/[id]/page.tsx
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getApplication } from '@/lib/db'
 import { ScoreCard } from '@/components/ScoreCard'
 import { JobMatchCard } from '@/components/JobMatchCard'
-import { AtsBreakdown } from '@/lib/pipeline'
+import { DeleteButton } from '@/components/DeleteButton'
+import { GenerateButton } from '@/components/GenerateButton'
+import { RestartButton } from '@/components/RestartButton'
+import { AtsBreakdown, getStalledState } from '@/lib/pipeline'
 import { JobMatchBreakdown } from '@/lib/jobmatch'
 
 const STATUS_OPTIONS = ['generated', 'applied', 'interview', 'offer', 'rejected'] as const
@@ -13,6 +15,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const { id } = await params
   const app = getApplication(Number(id))
   if (!app) notFound()
+
+  const stalledState = getStalledState(app)
 
   let atsBreakdown: AtsBreakdown | null = null
   let jobMatchBreakdown: JobMatchBreakdown | null = null
@@ -37,11 +41,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   return (
     <div>
-      {/* Back + actions */}
-      <div className="flex items-center justify-between mb-5">
-        <Link href="/" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-          ← Back to Board
-        </Link>
+      {/* Actions */}
+      <div className="flex items-center justify-end mb-5">
         <div className="flex gap-2 items-center">
           {app.status !== 'generating' && (
             <form action={updateStatus} className="flex gap-1.5 items-center">
@@ -62,16 +63,23 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
               </button>
             </form>
           )}
+          {app.status === 'pending' && <GenerateButton id={app.id} />}
+          {stalledState === 'running' && (
+            <a href={`/applications/${app.id}/progress`} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+              View Progress
+            </a>
+          )}
           {app.ats_score !== null && (
             <a
               href={`/output/${app.slug}_cv.pdf`}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+              className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
             >
               Open CV PDF
             </a>
           )}
+          <DeleteButton id={app.id} />
         </div>
       </div>
 
@@ -97,11 +105,35 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       </div>
 
       {/* Scores row */}
-      {app.status === 'generating' ? (
+      {app.status === 'pending' ? (
         <div className="flex gap-3 mb-5">
-          <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm animate-pulse">
-            Pipeline running...
+          <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm">
+            Hit <span className="text-slate-300 font-semibold">Generate CV & Cover Letter</span> to start the pipeline.
           </div>
+        </div>
+      ) : app.status === 'generating' ? (
+        <div className="flex gap-3 mb-5">
+          {stalledState === 'stalled' ? (
+            <div className="flex-1 bg-[#141414] border border-amber-800 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-amber-400">Pipeline stalled</div>
+                <div className="text-xs text-slate-500 mt-0.5">No activity for 15+ minutes</div>
+              </div>
+              <RestartButton id={app.id} />
+            </div>
+          ) : stalledState === 'crashed' ? (
+            <div className="flex-1 bg-[#141414] border border-red-800 rounded-lg p-4 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-red-400">Pipeline crashed</div>
+                <div className="text-xs text-slate-500 mt-0.5">Process exited with an error</div>
+              </div>
+              <RestartButton id={app.id} />
+            </div>
+          ) : (
+            <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm animate-pulse">
+              Pipeline running...
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex gap-3 mb-5">
@@ -151,6 +183,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       )}
 
       {/* Full JD */}
+
       <div className="bg-[#141414] border border-slate-800 rounded-lg p-4">
         <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Full Job Description</div>
         <div className="text-xs text-slate-400 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
