@@ -1,7 +1,7 @@
 // app/api/applications/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getApplication, updateApplication } from '@/lib/db'
-import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords } from '@/lib/pipeline'
+import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords, parseMatchedKeywords } from '@/lib/pipeline'
 import { scoreJobMatch } from '@/lib/jobmatch'
 
 const scoringInFlight = new Set<number>()
@@ -14,6 +14,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const steps = parsePipelineSteps(app.log)
   const currentAtsScore = parseCurrentAtsScore(app.log)
   const missingKeywords = parseMissingKeywords(app.log)
+  const matchedKeywords = parseMatchedKeywords(app.log)
+  const logLines = app.log.split('\n').filter(l => l.trim())
+  const logTail = logLines.slice(-20).join('\n')
 
   // Detect completion and finalize scores if not yet done
   if (app.status === 'generating' && app.log.includes('APPLICATION:') && !scoringInFlight.has(app.id)) {
@@ -52,6 +55,11 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     updateApplication(app.id, { status: 'generated' })
   }
 
+  // Don't finalize pending apps — the Analyzer pre-run exit is not a pipeline completion
+  if (app.status === 'pending' && exitMatch) {
+    // Do nothing — pre-run completed, app stays pending until user clicks Generate
+  }
+
   const freshApp = getApplication(Number(id))
 
   return NextResponse.json({
@@ -60,5 +68,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     steps,
     currentAtsScore,
     missingKeywords,
+    matchedKeywords,
+    logTail,
   })
 }

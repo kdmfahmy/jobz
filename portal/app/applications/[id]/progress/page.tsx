@@ -1,7 +1,7 @@
 // app/applications/[id]/progress/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PipelineProgress } from '@/components/PipelineProgress'
 import { PipelineStep } from '@/lib/pipeline'
@@ -12,6 +12,7 @@ interface StatusResponse {
   steps: PipelineStep[]
   currentAtsScore: number | null
   missingKeywords: string[]
+  logTail: string
 }
 
 export default function ProgressPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +20,7 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
   const [id, setId] = useState<string | null>(null)
   const [statusData, setStatusData] = useState<StatusResponse | null>(null)
   const [appInfo, setAppInfo] = useState<{ company: string; role: string } | null>(null)
+  const logRef = useRef<HTMLDivElement>(null)
 
   // Resolve params (Promise in Next.js 15+)
   useEffect(() => {
@@ -35,6 +37,11 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
       .then(data => setAppInfo({ company: data.company, role: data.role }))
       .catch(() => {})
   }, [id])
+
+  // Auto-scroll log tail to bottom on update
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+  }, [statusData?.logTail])
 
   // Poll status every 2 seconds
   useEffect(() => {
@@ -82,11 +89,24 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
       </div>
 
       {statusData ? (
-        <PipelineProgress
-          steps={statusData.steps}
-          currentAtsScore={statusData.currentAtsScore}
-          missingKeywords={statusData.missingKeywords}
-        />
+        <>
+          <PipelineProgress
+            steps={statusData.steps}
+            currentAtsScore={statusData.currentAtsScore}
+            missingKeywords={statusData.missingKeywords}
+          />
+          {statusData.logTail && (
+            <div className="mt-6">
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Live Output</div>
+              <div
+                ref={logRef}
+                className="bg-black/40 border border-slate-800 rounded-lg p-3 h-40 overflow-y-auto"
+              >
+                <pre className="font-mono text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">{statusData.logTail}</pre>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="space-y-4">
           {[1, 2, 3, 4].map(i => (

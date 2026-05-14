@@ -1,12 +1,14 @@
 // app/applications/[id]/page.tsx
 import { notFound } from 'next/navigation'
+import fs from 'fs'
+import path from 'path'
 import { getApplication } from '@/lib/db'
 import { ScoreCard } from '@/components/ScoreCard'
 import { JobMatchCard } from '@/components/JobMatchCard'
 import { DeleteButton } from '@/components/DeleteButton'
 import { GenerateButton } from '@/components/GenerateButton'
 import { RestartButton } from '@/components/RestartButton'
-import { AtsBreakdown, getStalledState } from '@/lib/pipeline'
+import { AtsBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords } from '@/lib/pipeline'
 import { JobMatchBreakdown } from '@/lib/jobmatch'
 
 const STATUS_OPTIONS = ['generated', 'applied', 'interview', 'offer', 'rejected'] as const
@@ -17,6 +19,13 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   if (!app) notFound()
 
   const stalledState = getStalledState(app)
+
+  const projectDir = process.env.PROJECT_ROOT ?? path.resolve(process.cwd(), '..')
+  const briefPath = path.join(projectDir, 'output', `${app.slug}_brief.md`)
+  const briefText = fs.existsSync(briefPath) ? fs.readFileSync(briefPath, 'utf-8') : null
+  const keywordGroups = briefText ? parseKeywordsFromBrief(briefText) : []
+  const matchedKeywords = parseMatchedKeywords(app.log)
+  const missingKeywords = parseMissingKeywords(app.log)
 
   let atsBreakdown: AtsBreakdown | null = null
   let jobMatchBreakdown: JobMatchBreakdown | null = null
@@ -182,11 +191,45 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
       )}
 
-      {/* Full JD */}
+      {/* Keywords */}
+      {keywordGroups.length > 0 && (
+        <div className="bg-[#141414] border border-slate-800 rounded-lg p-4 mb-5">
+          <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Skills</div>
+          <div className="space-y-3">
+            {keywordGroups.filter(g => !g.category.toLowerCase().includes('soft skill')).map(group => (
+              <div key={group.category}>
+                <div className="text-xs text-slate-600 mb-1.5">{group.category}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.keywords.map(kw => {
+                    const lk = kw.toLowerCase()
+                    const isMatched = matchedKeywords.some(m => m.toLowerCase() === lk)
+                    const isMissing = missingKeywords.some(m => m.toLowerCase() === lk)
+                    return (
+                      <span
+                        key={kw}
+                        className={`text-xs px-2 py-0.5 rounded-full border ${
+                          isMatched
+                            ? 'bg-emerald-900/50 border-emerald-700 text-emerald-300'
+                            : isMissing
+                            ? 'bg-red-900/50 border-red-800 text-red-300'
+                            : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {kw}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
+      {/* Full JD */}
       <div className="bg-[#141414] border border-slate-800 rounded-lg p-4">
         <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Full Job Description</div>
-        <div className="text-xs text-slate-400 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+        <div className="text-xs text-slate-400 leading-relaxed max-h-96 overflow-y-auto whitespace-pre-wrap">
           {app.jd_text}
         </div>
       </div>

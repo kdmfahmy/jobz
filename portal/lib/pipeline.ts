@@ -123,6 +123,35 @@ export function parseMissingKeywords(log: string): string[] {
   return [...new Set(missing)]
 }
 
+export function parseMatchedKeywords(log: string): string[] {
+  const matched: string[] = []
+  const presentMatches = [...log.matchAll(/✓ Present:\s*([^\n]+)/g)]
+  for (const m of presentMatches) {
+    const keywords = m[1].split(',').map(k => k.trim()).filter(Boolean)
+    matched.push(...keywords)
+  }
+  return [...new Set(matched)]
+}
+
+export interface KeywordGroup {
+  category: string
+  keywords: string[]
+}
+
+export function parseKeywordsFromBrief(briefText: string): KeywordGroup[] {
+  const atsSectionMatch = briefText.match(/## ATS Keyword List([\s\S]*)/)
+  if (!atsSectionMatch) return []
+  const groups: KeywordGroup[] = []
+  const subsections = atsSectionMatch[1].split(/\n### /).filter(s => s.trim())
+  for (const sub of subsections) {
+    const lines = sub.trim().split('\n')
+    const category = lines[0].trim()
+    const keywords = lines.slice(1).map(l => l.trim()).filter(l => l && !l.startsWith('#'))
+    if (keywords.length) groups.push({ category, keywords })
+  }
+  return groups
+}
+
 
 export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
   const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
