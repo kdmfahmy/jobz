@@ -47,43 +47,42 @@ Wait for the Analyzer to complete. It will:
 
 Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief. Also extract **Company** and **Title** from the Role Info section.
 
-If a portal record was created in Phase 0, update it with the real data and compute the job match score:
+If a portal record was created in Phase 0, update it with the real data:
 
 ```bash
-python3 - <<'PYEOF'
-import sqlite3, subprocess, json, sys
-
-app_id = {APP_ID}
-slug   = "{SLUG}"
-company = "{COMPANY}"
-role    = "{ROLE_TITLE}"
-brief_path = f"applications/{app_id}-{slug}/brief.md"
-
-# Update slug/company/role/jd_text
+python3 -c "
+import sqlite3, sys
+db = sqlite3.connect('portal/jobz.db')
+slug, company, role, brief_path, app_id = sys.argv[1:]
 jd_text = open(brief_path).read()
-db = sqlite3.connect("portal/jobz.db")
-db.execute(
-    "UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?",
-    (slug, company, role, jd_text, app_id)
-)
+db.execute(\"UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?\",
+           (slug, company, role, jd_text, int(app_id)))
 db.commit()
-print("Portal record updated")
+print('Portal record updated')
+" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "applications/{APP_ID}-{SLUG}/brief.md" "{APP_ID}"
+```
 
-# Compute job match score
-template = open("prompts/jobmatch.md").read()
-profile  = open("profile/base_profile.md").read()
-prompt   = template.replace("{PROFILE}", profile).replace("{BRIEF}", jd_text)
+Then compute the job match score directly — read `profile/base_profile.md` and the brief you just confirmed, and score the match across these four dimensions:
 
-result = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True, timeout=60)
-data = json.loads(result.stdout.strip())
+- **Skills (40%):** compare the candidate's technical skills and tools against the JD requirements — list matched skills and gaps
+- **Experience (35%):** assess years, seniority level, and domain relevance
+- **Education (15%):** degree field and level match
+- **Domain (10%):** industry and problem-space alignment
 
-db.execute(
-    "UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?",
-    (data["overall"], json.dumps(data["breakdown"]), app_id)
-)
+Produce scores 0–100 for each dimension. Overall = Skills×0.4 + Experience×0.35 + Education×0.15 + Domain×0.10.
+
+Store the result in the portal DB:
+
+```bash
+python3 -c "
+import sqlite3, json, sys
+db = sqlite3.connect('portal/jobz.db')
+overall, breakdown, app_id = sys.argv[1], sys.argv[2], int(sys.argv[3])
+db.execute(\"UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?\",
+           (int(overall), breakdown, app_id))
 db.commit()
-print(f"Job match score: {data['overall']}")
-PYEOF
+print('Job match score:', overall)
+" "{OVERALL}" "{BREAKDOWN_JSON}" "{APP_ID}"
 ```
 
 ---
