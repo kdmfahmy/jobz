@@ -8,6 +8,23 @@ You are the orchestrator for a 3-agent job application pipeline. Your job is to 
 
 ---
 
+## Phase 0 — Register in portal
+
+**Only run this phase if APP_ID is empty or not provided.**
+
+Create a stub record in the portal database so the application appears in the portal immediately:
+
+```bash
+APP_ID=$(sqlite3 portal/jobz.db "INSERT INTO applications (slug, company, role, jd_text, status) VALUES ('pending-$(date +%s)', 'pending', 'pending', '', 'generating') RETURNING id;")
+echo "Portal record created: ID $APP_ID"
+```
+
+If this fails (e.g. `portal/jobz.db` does not exist yet), print a warning and continue — the files will still be written correctly, they just won't appear in the portal.
+
+Use this `$APP_ID` for the rest of the pipeline.
+
+---
+
 ## Phase 1 — Analyze
 
 If **Skip analysis** is `true`: check whether `applications/$APP_ID-{SLUG}/brief.md` already exists (derive the slug from the job input). If the file exists, read it directly — do not spawn the Analyzer Agent. Extract the confirmed slug from the "Slug" field in the brief and proceed to Phase 2.
@@ -28,7 +45,22 @@ Wait for the Analyzer to complete. It will:
 - Write `applications/$APP_ID-{SLUG}/brief.md`
 - Return the brief contents
 
-Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief.
+Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief. Also extract **Company** and **Title** from the Role Info section.
+
+If a portal record was created in Phase 0, update it with the real data now:
+
+```bash
+python3 -c "
+import sqlite3, sys
+db = sqlite3.connect('portal/jobz.db')
+slug, company, role, brief_path, app_id = sys.argv[1:]
+jd_text = open(brief_path).read()
+db.execute(\"UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?\",
+           (slug, company, role, jd_text, int(app_id)))
+db.commit()
+print('Portal record updated')
+" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "applications/{APP_ID}-{SLUG}/brief.md" "{APP_ID}"
+```
 
 ---
 
@@ -92,6 +124,12 @@ Then rerun the compilation manually:
 ```
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry compilation. Do not give up — diagnose and fix.
+
+If a portal record exists, mark it generated with the final ATS score:
+
+```bash
+sqlite3 portal/jobz.db "UPDATE applications SET status='generated', ats_score={FINAL_SCORE}, updated_at=datetime('now') WHERE id={APP_ID};"
+```
 
 ---
 
