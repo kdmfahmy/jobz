@@ -27,8 +27,14 @@ portal/.vercel
 portal/*.tsbuildinfo
 portal/next-env.d.ts
 
-# portal — local database
+# local database (anywhere in the tree)
+jobz.db
+jobz.db-shm
+jobz.db-wal
 portal/jobz.db
 portal/jobz.db-shm
 portal/jobz.db-wal
 .pipeline-logs/
+
+# applications
+applications

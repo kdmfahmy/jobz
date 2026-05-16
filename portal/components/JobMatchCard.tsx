@@ -1,5 +1,5 @@
 // components/JobMatchCard.tsx
-import { JobMatchBreakdown } from '@/lib/jobmatch'
+import { JobMatchBreakdown } from '@/lib/pipeline'
 
 interface JobMatchCardProps {
   score: number

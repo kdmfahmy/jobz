@@ -1,8 +1,7 @@
 // app/api/applications/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getApplication, updateApplication } from '@/lib/db'
-import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords, parseMatchedKeywords, getStalledState, getCurrentRunLog, readPipelineLog } from '@/lib/pipeline'
-import { scoreJobMatch } from '@/lib/jobmatch'
+import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords, parseMatchedKeywords, parseJobMatchResult, getStalledState, getCurrentRunLog, readPipelineLog } from '@/lib/pipeline'
 
 const scoringInFlight = new Set<number>()
 
@@ -24,30 +23,19 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     scoringInFlight.add(app.id)
     const atsResult = parseAtsResult(currentRunLog)
     if (atsResult) {
-      try {
-        const jobMatch = scoreJobMatch(app.id, app.slug)
-        updateApplication(app.id, {
-          status: 'generated',
-          ats_score: atsResult.score,
-          ats_breakdown: JSON.stringify(atsResult.breakdown),
-          iterations: JSON.stringify(atsResult.iterations),
+      const jobMatch = parseJobMatchResult(currentRunLog)
+      updateApplication(app.id, {
+        status: 'generated',
+        ats_score: atsResult.score,
+        ats_breakdown: JSON.stringify(atsResult.breakdown),
+        iterations: JSON.stringify(atsResult.iterations),
+        ...(jobMatch ? {
           job_match_score: jobMatch.overall,
           job_match_breakdown: JSON.stringify(jobMatch.breakdown),
-        })
-      } catch {
-        // Job match scoring failed — still mark as generated with just ATS
-        updateApplication(app.id, {
-          status: 'generated',
-          ats_score: atsResult.score,
-          ats_breakdown: JSON.stringify(atsResult.breakdown),
-          iterations: JSON.stringify(atsResult.iterations),
-        })
-      } finally {
-        scoringInFlight.delete(app.id)
-      }
-    } else {
-      scoringInFlight.delete(app.id)
+        } : {}),
+      })
     }
+    scoringInFlight.delete(app.id)
   }
 
   const freshApp = getApplication(Number(id))!

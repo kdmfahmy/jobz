@@ -3,7 +3,6 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { getApplication, updateApplication } from './db'
-import { scoreJobMatch } from './jobmatch'
 
 function projectRoot(): string {
   return process.env.PROJECT_ROOT ?? path.resolve(process.cwd(), '..')
@@ -193,6 +192,19 @@ export function parseRevisionHistory(log: string): string[] {
   return results
 }
 
+export interface JobMatchBreakdown {
+  skills:     { score: number; matched: string[]; gaps: string[] }
+  experience: { score: number; notes: string }
+  education:  { score: number; notes: string }
+  domain:     { score: number; notes: string }
+}
+
+export function parseJobMatchResult(log: string): { overall: number; breakdown: JobMatchBreakdown } | null {
+  const m = log.match(/\[JOB_MATCH_START\]\n([\s\S]*?)\n\[JOB_MATCH_END\]/)
+  if (!m) return null
+  try { return JSON.parse(m[1]) } catch { return null }
+}
+
 export function parseMatchedKeywords(log: string): string[] {
   const matched: string[] = []
   const presentMatches = [...log.matchAll(/✓ Present:\s*([^\n]+)/g)]
@@ -230,24 +242,17 @@ export function finalizeIfComplete(applicationId: number): void {
   if (!currentRunLog.includes('APPLICATION:')) return
   const atsResult = parseAtsResult(currentRunLog)
   if (!atsResult) return
-  try {
-    const jobMatch = scoreJobMatch(app.id, app.slug)
-    updateApplication(app.id, {
-      status: 'generated',
-      ats_score: atsResult.score,
-      ats_breakdown: JSON.stringify(atsResult.breakdown),
-      iterations: JSON.stringify(atsResult.iterations),
+  const jobMatch = parseJobMatchResult(currentRunLog)
+  updateApplication(app.id, {
+    status: 'generated',
+    ats_score: atsResult.score,
+    ats_breakdown: JSON.stringify(atsResult.breakdown),
+    iterations: JSON.stringify(atsResult.iterations),
+    ...(jobMatch ? {
       job_match_score: jobMatch.overall,
       job_match_breakdown: JSON.stringify(jobMatch.breakdown),
-    })
-  } catch {
-    updateApplication(app.id, {
-      status: 'generated',
-      ats_score: atsResult.score,
-      ats_breakdown: JSON.stringify(atsResult.breakdown),
-      iterations: JSON.stringify(atsResult.iterations),
-    })
-  }
+    } : {}),
+  })
 }
 
 export function spawnRevise(applicationId: number, slug: string, feedback: string, updateProfile = false): void {

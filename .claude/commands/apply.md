@@ -71,18 +71,31 @@ Then compute the job match score directly — read `profile/base_profile.md` and
 
 Produce scores 0–100 for each dimension. Overall = Skills×0.4 + Experience×0.35 + Education×0.15 + Domain×0.10.
 
-Store the result in the portal DB:
+Output the result as a log marker so the portal can parse it (replace values with your computed numbers/lists):
+
+```
+[JOB_MATCH_START]
+{"overall": X, "breakdown": {"skills": {"score": X, "matched": ["skill1"], "gaps": ["gap1"]}, "experience": {"score": X, "notes": "one line"}, "education": {"score": X, "notes": "one line"}, "domain": {"score": X, "notes": "one line"}}}
+[JOB_MATCH_END]
+```
+
+Then store it in the portal DB:
 
 ```bash
-python3 -c "
-import sqlite3, json, sys
-db = sqlite3.connect('portal/jobz.db')
-overall, breakdown, app_id = sys.argv[1], sys.argv[2], int(sys.argv[3])
-db.execute(\"UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?\",
-           (int(overall), breakdown, app_id))
+python3 - <<'PYEOF'
+import sqlite3, json, re
+
+log = open(f"applications/{APP_ID}-{SLUG}/brief.md").read()  # use actual computed values below
+overall = {OVERALL}
+breakdown = {BREAKDOWN_JSON}
+app_id = {APP_ID}
+
+db = sqlite3.connect("portal/jobz.db")
+db.execute("UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?",
+           (overall, json.dumps(breakdown), app_id))
 db.commit()
-print('Job match score:', overall)
-" "{OVERALL}" "{BREAKDOWN_JSON}" "{APP_ID}"
+print(f"Job match score: {overall}")
+PYEOF
 ```
 
 ---

@@ -10,8 +10,7 @@ import { GenerateButton } from '@/components/GenerateButton'
 import { ReviseForm } from '@/components/ReviseForm'
 import { StatusSelect } from '@/components/StatusSelect'
 import { GeneratingStatus } from '@/components/GeneratingStatus'
-import { AtsBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords, parseRevisionHistory, readPipelineLog } from '@/lib/pipeline'
-import { JobMatchBreakdown } from '@/lib/jobmatch'
+import { AtsBreakdown, JobMatchBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords, parseRevisionHistory, readPipelineLog } from '@/lib/pipeline'
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
