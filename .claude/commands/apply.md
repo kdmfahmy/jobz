@@ -47,19 +47,43 @@ Wait for the Analyzer to complete. It will:
 
 Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief. Also extract **Company** and **Title** from the Role Info section.
 
-If a portal record was created in Phase 0, update it with the real data now:
+If a portal record was created in Phase 0, update it with the real data and compute the job match score:
 
 ```bash
-python3 -c "
-import sqlite3, sys
-db = sqlite3.connect('portal/jobz.db')
-slug, company, role, brief_path, app_id = sys.argv[1:]
+python3 - <<'PYEOF'
+import sqlite3, subprocess, json, sys
+
+app_id = {APP_ID}
+slug   = "{SLUG}"
+company = "{COMPANY}"
+role    = "{ROLE_TITLE}"
+brief_path = f"applications/{app_id}-{slug}/brief.md"
+
+# Update slug/company/role/jd_text
 jd_text = open(brief_path).read()
-db.execute(\"UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?\",
-           (slug, company, role, jd_text, int(app_id)))
+db = sqlite3.connect("portal/jobz.db")
+db.execute(
+    "UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?",
+    (slug, company, role, jd_text, app_id)
+)
 db.commit()
-print('Portal record updated')
-" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "applications/{APP_ID}-{SLUG}/brief.md" "{APP_ID}"
+print("Portal record updated")
+
+# Compute job match score
+template = open("prompts/jobmatch.md").read()
+profile  = open("profile/base_profile.md").read()
+prompt   = template.replace("{PROFILE}", profile).replace("{BRIEF}", jd_text)
+
+result = subprocess.run(["claude", "-p", prompt], capture_output=True, text=True, timeout=60)
+data = json.loads(result.stdout.strip())
+
+db.execute(
+    "UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?",
+    (data["overall"], json.dumps(data["breakdown"]), app_id)
+)
+db.commit()
+print(f"Job match score: {data['overall']}")
+PYEOF
 ```
 
 ---
