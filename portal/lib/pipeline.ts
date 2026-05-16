@@ -2,7 +2,35 @@
 import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-import { appendLog, updateApplication } from './db'
+import { getApplication, updateApplication } from './db'
+import { scoreJobMatch } from './jobmatch'
+
+function projectRoot(): string {
+  return process.env.PROJECT_ROOT ?? path.resolve(process.cwd(), '..')
+}
+
+function logPath(appId: number): string {
+  return path.join(projectRoot(), '.pipeline-logs', `${appId}.log`)
+}
+
+/**
+ * Read the pipeline log from disk. The child process writes here directly via
+ * its stdio file descriptors, so output survives Next.js dev-server restarts.
+ */
+export function readPipelineLog(appId: number): string {
+  try {
+    return fs.readFileSync(logPath(appId), 'utf-8')
+  } catch {
+    return ''
+  }
+}
+
+/** Append text (markers, etc.) to the pipeline log file. */
+export function appendPipelineLog(appId: number, text: string): void {
+  const p = logPath(appId)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.appendFileSync(p, text)
+}
 
 export interface PipelineStep {
   name: string
@@ -26,14 +54,43 @@ export interface AtsResult {
 
 export const STALE_THRESHOLD_MS = 15 * 60 * 1000
 
+export function getCurrentRunLog(log: string): string {
+  let latestIdx = -1
+  for (const marker of ['[RESTART:', '[REVISE REQUEST]', '[REVISE REQUEST:']) {
+    const idx = log.lastIndexOf(marker)
+    if (idx > latestIdx) latestIdx = idx
+  }
+  return latestIdx === -1 ? log : log.slice(latestIdx)
+}
+
 export type StalledState = 'running' | 'stalled' | 'crashed'
 
-export function getStalledState(app: { status: string; log: string; updated_at: string }): StalledState | null {
+export function getStalledState(app: { id: number; status: string; pid?: number | null }): StalledState | null {
   if (app.status !== 'generating') return null
-  const exitMatch = app.log.match(/\[PIPELINE_EXIT:(\d+)\]/)
-  if (exitMatch && exitMatch[1] !== '0') return 'crashed'
-  const updatedAt = new Date(app.updated_at.replace(' ', 'T') + 'Z').getTime()
-  if (Date.now() - updatedAt > STALE_THRESHOLD_MS) return 'stalled'
+  // Check only the current run's log so previous runs' exit markers don't interfere
+  const currentRunLog = getCurrentRunLog(readPipelineLog(app.id))
+  const exitMatch = currentRunLog.match(/\[PIPELINE_EXIT:(\d+)\]/)
+  if (exitMatch) {
+    if (exitMatch[1] !== '0') return 'crashed'
+    // Exit 0 but no final report = Claude responded conversationally instead of running the pipeline
+    return currentRunLog.includes('APPLICATION:') ? 'running' : 'crashed'
+  }
+  // PID check: is the process still alive?
+  if (app.pid) {
+    try {
+      process.kill(app.pid, 0) // throws if process no longer exists
+      return 'running'
+    } catch {
+      return 'stalled'
+    }
+  }
+  // Fallback: PID unknown (server restarted mid-run) — use the log file's mtime
+  try {
+    const mtime = fs.statSync(logPath(app.id)).mtimeMs
+    if (Date.now() - mtime > STALE_THRESHOLD_MS) return 'stalled'
+  } catch {
+    return 'stalled'
+  }
   return 'running'
 }
 
@@ -99,9 +156,9 @@ export function parseAtsResult(log: string): AtsResult | null {
     actionVerbs:  n(/Action Verbs:\s*(\d+)\/8/),
   }
 
-  const historyMatch = log.match(/Score history:\s*\[([^\]]+)\]/)
+  const historyMatch = log.match(/Score history:\s*([0-9→ ]+)/)
   const iterations = historyMatch
-    ? historyMatch[1].split(/\s*→\s*/).map(Number)
+    ? historyMatch[1].split(/\s*→\s*/).map(Number).filter(n => !isNaN(n))
     : [score]
 
   return { score, breakdown, iterations }
@@ -121,6 +178,19 @@ export function parseMissingKeywords(log: string): string[] {
     missing.push(...keywords)
   }
   return [...new Set(missing)]
+}
+
+export function parseRevisionHistory(log: string): string[] {
+  const results: string[] = []
+  // New block format: [REVISE REQUEST]\nfeedback\n[/REVISE REQUEST]
+  for (const m of log.matchAll(/\[REVISE REQUEST\]\n([\s\S]*?)\n\[\/REVISE REQUEST\]/g)) {
+    results.push(m[1].trim())
+  }
+  // Legacy single-line format: [REVISE REQUEST: feedback]
+  for (const m of log.matchAll(/\[REVISE REQUEST: ([^\n\]]+)\]/g)) {
+    results.push(m[1].trim())
+  }
+  return results
 }
 
 export function parseMatchedKeywords(log: string): string[] {
@@ -153,8 +223,96 @@ export function parseKeywordsFromBrief(briefText: string): KeywordGroup[] {
 }
 
 
-export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
+export function finalizeIfComplete(applicationId: number): void {
+  const app = getApplication(applicationId)
+  if (!app || app.status !== 'generating') return
+  const currentRunLog = getCurrentRunLog(readPipelineLog(applicationId))
+  if (!currentRunLog.includes('APPLICATION:')) return
+  const atsResult = parseAtsResult(currentRunLog)
+  if (!atsResult) return
+  try {
+    const jobMatch = scoreJobMatch(app.id, app.slug)
+    updateApplication(app.id, {
+      status: 'generated',
+      ats_score: atsResult.score,
+      ats_breakdown: JSON.stringify(atsResult.breakdown),
+      iterations: JSON.stringify(atsResult.iterations),
+      job_match_score: jobMatch.overall,
+      job_match_breakdown: JSON.stringify(jobMatch.breakdown),
+    })
+  } catch {
+    updateApplication(app.id, {
+      status: 'generated',
+      ats_score: atsResult.score,
+      ats_breakdown: JSON.stringify(atsResult.breakdown),
+      iterations: JSON.stringify(atsResult.iterations),
+    })
+  }
+}
+
+export function spawnRevise(applicationId: number, slug: string, feedback: string, updateProfile = false): void {
   const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
+  const reviseMd = fs.readFileSync(
+    path.join(projectDir, '.claude/commands/revise.md'),
+    'utf-8'
+  )
+  const prompt = reviseMd
+    .replace(/\{SLUG\}/g, slug)
+    .replace(/\{APP_ID\}/g, String(applicationId))
+    .replace(/\{FEEDBACK\}/g, feedback)
+    .replace(/\{UPDATE_PROFILE\}/g, updateProfile ? 'true' : 'false')
+
+  spawnClaude(applicationId, prompt)
+}
+
+/**
+ * Spawn the claude CLI inside a detached bash pipeline that streams JSON
+ * events through a transformer and appends readable text straight to the log
+ * file. Nothing in the data path lives in the Next.js server process, so
+ * output keeps flowing (and the exit marker still gets written) even if the
+ * dev server hot-reloads and orphans the pipeline.
+ *
+ * `claude -p` (text mode) buffers all output until exit, so stream-json is
+ * required for live progress.
+ */
+function spawnClaude(applicationId: number, prompt: string): void {
+  const projectDir = projectRoot()
+  const p = logPath(applicationId)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.appendFileSync(p, `[PIPELINE_START: ${new Date().toISOString()}]\n`)
+
+  const transform = path.join(projectDir, 'portal', 'lib', 'stream-transform.mjs')
+  // PIPESTATUS[0] = claude's exit code (not the transformer's). bash required.
+  const script =
+    'claude --dangerously-skip-permissions --output-format stream-json --verbose --model claude-sonnet-4-6 ' +
+    '-p "$CLAUDE_PROMPT" < /dev/null 2>&1 | node "$CLAUDE_TRANSFORM" >> "$CLAUDE_LOG"\n' +
+    'echo "" >> "$CLAUDE_LOG"\n' +
+    'echo "[PIPELINE_EXIT:${PIPESTATUS[0]}]" >> "$CLAUDE_LOG"\n'
+
+  const child = spawn('bash', ['-c', script], {
+    cwd: projectDir,
+    detached: true,
+    stdio: 'ignore',
+    env: {
+      ...process.env,
+      CLAUDE_PROMPT: prompt,
+      CLAUDE_LOG: p,
+      CLAUDE_TRANSFORM: transform,
+    },
+  })
+
+  if (child.pid) updateApplication(applicationId, { pid: child.pid })
+
+  child.on('close', () => {
+    updateApplication(applicationId, { pid: null })
+    finalizeIfComplete(applicationId)
+  })
+
+  child.unref()
+}
+
+export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
+  const projectDir = projectRoot()
   const applyMd = fs.readFileSync(
     path.join(projectDir, '.claude/commands/apply.md'),
     'utf-8'
@@ -163,24 +321,7 @@ export function spawnPipeline(applicationId: number, jdInput: string, webResearc
     .replace(/\$ARGUMENTS/g, jdInput)
     .replace(/\$WEB_RESEARCH/g, webResearch ? 'enabled' : 'disabled')
     .replace(/\$SKIP_ANALYSIS/g, skipAnalysis ? 'true' : 'false')
+    .replace(/\$APP_ID/g, String(applicationId))
 
-  const child = spawn(
-    'claude',
-    ['--dangerously-skip-permissions', '-p', prompt],
-    {
-      cwd: projectDir,
-      detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }
-  )
-
-  const write = (chunk: Buffer) => appendLog(applicationId, chunk.toString())
-  child.stdout.on('data', write)
-  child.stderr.on('data', write)
-
-  child.on('close', (code) => {
-    appendLog(applicationId, `\n[PIPELINE_EXIT:${code}]\n`)
-  })
-
-  child.unref()
+  spawnClaude(applicationId, prompt)
 }

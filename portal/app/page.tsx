@@ -2,14 +2,19 @@
 import Link from 'next/link'
 import { listApplications, ApplicationStatus } from '@/lib/db'
 import { KanbanColumn } from '@/components/KanbanColumn'
+import { finalizeIfComplete } from '@/lib/pipeline'
 
 export const dynamic = 'force-dynamic'
 
 const COLUMNS: ApplicationStatus[] = [
-  'generating', 'generated', 'applied', 'interview', 'offer', 'rejected',
+  'pending', 'generating', 'generated', 'applied', 'interview', 'offer', 'rejected',
 ]
 
 export default function BoardPage() {
+  // Finalize any pipelines that completed while the server was down
+  const stale = listApplications().filter(a => a.status === 'generating')
+  for (const app of stale) finalizeIfComplete(app.id)
+
   const apps = listApplications()
   const byStatus = Object.fromEntries(
     COLUMNS.map(s => [s, apps.filter(a => a.status === s)])

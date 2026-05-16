@@ -7,11 +7,11 @@ import { ScoreCard } from '@/components/ScoreCard'
 import { JobMatchCard } from '@/components/JobMatchCard'
 import { DeleteButton } from '@/components/DeleteButton'
 import { GenerateButton } from '@/components/GenerateButton'
-import { RestartButton } from '@/components/RestartButton'
-import { AtsBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords } from '@/lib/pipeline'
+import { ReviseForm } from '@/components/ReviseForm'
+import { StatusSelect } from '@/components/StatusSelect'
+import { GeneratingStatus } from '@/components/GeneratingStatus'
+import { AtsBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords, parseRevisionHistory, readPipelineLog } from '@/lib/pipeline'
 import { JobMatchBreakdown } from '@/lib/jobmatch'
-
-const STATUS_OPTIONS = ['generated', 'applied', 'interview', 'offer', 'rejected'] as const
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,11 +21,13 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const stalledState = getStalledState(app)
 
   const projectDir = process.env.PROJECT_ROOT ?? path.resolve(process.cwd(), '..')
-  const briefPath = path.join(projectDir, 'output', `${app.slug}_brief.md`)
+  const briefPath = path.join(projectDir, 'applications', `${id}-${app.slug}`, 'brief.md')
   const briefText = fs.existsSync(briefPath) ? fs.readFileSync(briefPath, 'utf-8') : null
   const keywordGroups = briefText ? parseKeywordsFromBrief(briefText) : []
-  const matchedKeywords = parseMatchedKeywords(app.log)
-  const missingKeywords = parseMissingKeywords(app.log)
+  const pipelineLog = readPipelineLog(app.id)
+  const matchedKeywords = parseMatchedKeywords(pipelineLog)
+  const missingKeywords = parseMissingKeywords(pipelineLog)
+  const revisionHistory = parseRevisionHistory(pipelineLog)
 
   let atsBreakdown: AtsBreakdown | null = null
   let jobMatchBreakdown: JobMatchBreakdown | null = null
@@ -36,51 +38,18 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
     if (app.iterations) iterations = JSON.parse(app.iterations)
   } catch {}
 
-  async function updateStatus(formData: FormData) {
-    'use server'
-    const { updateApplication } = await import('@/lib/db')
-    const { revalidatePath } = await import('next/cache')
-    const status = formData.get('status') as string
-    const validStatuses = ['generated', 'applied', 'interview', 'offer', 'rejected'] as const
-    if (!validStatuses.includes(status as typeof validStatuses[number])) return
-    updateApplication(Number(id), { status: status as typeof validStatuses[number] })
-    revalidatePath('/')
-    revalidatePath(`/applications/${id}`)
-  }
-
   return (
     <div>
       {/* Actions */}
       <div className="flex items-center justify-end mb-5">
         <div className="flex gap-2 items-center">
           {app.status !== 'generating' && (
-            <form action={updateStatus} className="flex gap-1.5 items-center">
-              <select
-                name="status"
-                defaultValue={app.status}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
-              >
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors"
-              >
-                Update
-              </button>
-            </form>
+            <StatusSelect id={app.id} current={app.status} />
           )}
           {app.status === 'pending' && <GenerateButton id={app.id} />}
-          {stalledState === 'running' && (
-            <a href={`/applications/${app.id}/progress`} className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-              View Progress
-            </a>
-          )}
           {app.ats_score !== null && (
             <a
-              href={`/output/${app.slug}_cv.pdf`}
+              href={`/applications/${id}-${app.slug}/cv.pdf`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
@@ -122,27 +91,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </div>
       ) : app.status === 'generating' ? (
         <div className="flex gap-3 mb-5">
-          {stalledState === 'stalled' ? (
-            <div className="flex-1 bg-[#141414] border border-amber-800 rounded-lg p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-amber-400">Pipeline stalled</div>
-                <div className="text-xs text-slate-500 mt-0.5">No activity for 15+ minutes</div>
-              </div>
-              <RestartButton id={app.id} />
-            </div>
-          ) : stalledState === 'crashed' ? (
-            <div className="flex-1 bg-[#141414] border border-red-800 rounded-lg p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold text-red-400">Pipeline crashed</div>
-                <div className="text-xs text-slate-500 mt-0.5">Process exited with an error</div>
-              </div>
-              <RestartButton id={app.id} />
-            </div>
-          ) : (
-            <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm animate-pulse">
-              Pipeline running...
-            </div>
-          )}
+          <GeneratingStatus id={app.id} initialStalledState={stalledState} />
         </div>
       ) : (
         <div className="flex gap-3 mb-5">
@@ -160,15 +109,15 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4">
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Documents</div>
             <div className="space-y-2">
-              {[['CV', `${app.slug}_cv`], ['Cover Letter', `${app.slug}_cover_letter`]].map(([label, base]) => (
-                <div key={base} className="bg-slate-800 rounded-lg p-2.5 flex items-center justify-between">
+              {[['CV', 'cv'], ['Cover Letter', 'cover_letter']].map(([label, file]) => (
+                <div key={file} className="bg-slate-800 rounded-lg p-2.5 flex items-center justify-between">
                   <div>
                     <div className="text-xs font-semibold text-slate-200">{label}</div>
-                    <div className="text-xs text-slate-500">{base}.pdf</div>
+                    <div className="text-xs text-slate-500">{file}.pdf</div>
                   </div>
                   <div className="flex gap-1.5">
                     <a
-                      href={`/output/${base}.pdf`}
+                      href={`/applications/${id}-${app.slug}/${file}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-blue-900 text-blue-300 text-xs px-2 py-0.5 rounded hover:bg-blue-800"
@@ -176,7 +125,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                       PDF
                     </a>
                     <a
-                      href={`/output/${base}.tex`}
+                      href={`/applications/${id}-${app.slug}/${file}.tex`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-slate-700 text-slate-400 text-xs px-2 py-0.5 rounded hover:bg-slate-600"
@@ -190,6 +139,24 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           </div>
         </div>
       )}
+
+      {/* Revision history — always visible once revisions exist */}
+      {revisionHistory.length > 0 && (
+        <div className="bg-[#141414] border border-slate-800 rounded-lg p-4 mb-3">
+          <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Revision History</div>
+          <ol className="space-y-2">
+            {revisionHistory.map((entry, i) => (
+              <li key={i} className="flex items-center gap-3 text-xs">
+                <span className="text-slate-600 flex-shrink-0 w-5 text-right">{i + 1}.</span>
+                <span className="bg-slate-800 rounded-md px-3 py-2 text-slate-300 leading-relaxed flex-1">{entry}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Revise form */}
+      {app.status === 'generated' && <ReviseForm id={app.id} />}
 
       {/* Keywords */}
       {keywordGroups.length > 0 && (

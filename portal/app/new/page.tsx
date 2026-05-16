@@ -10,16 +10,38 @@ export default function NewApplicationPage() {
   const [jdText, setJdText] = useState('')
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
+  const [webResearch, setWebResearch] = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Auto-extract company/role from pasted JD text
+  async function handleUrlBlur() {
+    const url = jdUrl.trim()
+    if (!url) return
+    setFetching(true)
+    setFetchError('')
+    try {
+      const res = await fetch(`/api/fetch-jd?url=${encodeURIComponent(url)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to fetch')
+      if (data.role && !role) setRole(data.role)
+      if (data.company && !company) setCompany(data.company)
+      if (data.jd_text && !jdText) setJdText(data.jd_text)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Could not fetch URL')
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  // Auto-extract from pasted JD text when no URL provided
   function handleJdChange(text: string) {
     setJdText(text)
-    const titleMatch = text.match(/^(.+?)\s*\n/)
-    if (titleMatch && !role) setRole(titleMatch[1].trim().slice(0, 80))
-    const appleMatch = text.match(/\bApple\b/i)
-    if (appleMatch && !company) setCompany('Apple')
+    if (!jdUrl) {
+      const titleMatch = text.match(/^(.+?)\s*\n/)
+      if (titleMatch && !role) setRole(titleMatch[1].trim().slice(0, 80))
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -38,14 +60,18 @@ export default function NewApplicationPage() {
       const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined }),
+        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined, web_research: webResearch }),
       })
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? 'Failed to create application')
+        let errMsg = 'Failed to create application'
+        try {
+          const data = await res.json()
+          if (data.error) errMsg = data.error
+        } catch {}
+        throw new Error(errMsg)
       }
       const app = await res.json()
-      router.push(`/applications/${app.id}/progress`)
+      router.push(`/applications/${app.id}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoading(false)
@@ -65,14 +91,27 @@ export default function NewApplicationPage() {
           <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
             Job URL <span className="text-slate-600 font-normal normal-case">(optional)</span>
           </label>
-          <input
-            type="url"
-            value={jdUrl}
-            onChange={e => setJdUrl(e.target.value)}
-            placeholder="https://jobs.apple.com/en-us/details/..."
-            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-          />
-          <p className="text-xs text-slate-600 mt-1">If provided, the JD will be fetched automatically.</p>
+          <div className="relative">
+            <input
+              type="url"
+              value={jdUrl}
+              onChange={e => setJdUrl(e.target.value)}
+              onBlur={handleUrlBlur}
+              placeholder="https://jobs.apple.com/en-us/details/..."
+              className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+            />
+            {fetching && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 animate-pulse">
+                Fetching…
+              </span>
+            )}
+          </div>
+          {fetchError && (
+            <p className="text-xs text-amber-500 mt-1">{fetchError} — fill in company and role manually.</p>
+          )}
+          {!fetchError && (
+            <p className="text-xs text-slate-600 mt-1">Company, role, and JD will be auto-filled when you leave this field.</p>
+          )}
         </div>
 
         {/* Divider */}
@@ -80,6 +119,32 @@ export default function NewApplicationPage() {
           <div className="flex-1 h-px bg-slate-800" />
           <span className="text-xs text-slate-600">OR PASTE JD BELOW</span>
           <div className="flex-1 h-px bg-slate-800" />
+        </div>
+
+        {/* Job Title */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+            Job Title <span className="text-slate-600 font-normal normal-case">(auto-filled)</span>
+          </label>
+          <input
+            value={role}
+            onChange={e => setRole(e.target.value)}
+            placeholder="Senior Software Engineer"
+            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* Company */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+            Company <span className="text-slate-600 font-normal normal-case">(auto-filled)</span>
+          </label>
+          <input
+            value={company}
+            onChange={e => setCompany(e.target.value)}
+            placeholder="Apple"
+            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+          />
         </div>
 
         {/* JD textarea */}
@@ -96,30 +161,21 @@ export default function NewApplicationPage() {
           />
         </div>
 
-        {/* Company + Role */}
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
-              Company <span className="text-slate-600 font-normal normal-case">(auto-filled)</span>
-            </label>
-            <input
-              value={company}
-              onChange={e => setCompany(e.target.value)}
-              placeholder="Apple"
-              className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-            />
+        {/* Web research toggle */}
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-[#141414] px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-slate-300">Web research</p>
+            <p className="text-xs text-slate-500 mt-0.5">Analyzer will search for company info and benchmark the role — adds ~1 min</p>
           </div>
-          <div className="flex-1">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
-              Role Title <span className="text-slate-600 font-normal normal-case">(auto-filled)</span>
-            </label>
-            <input
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              placeholder="Senior Software Engineer"
-              className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={webResearch}
+            onClick={() => setWebResearch(v => !v)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${webResearch ? 'bg-blue-600' : 'bg-slate-700'}`}
+          >
+            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${webResearch ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
         </div>
 
         {error && (
@@ -131,7 +187,7 @@ export default function NewApplicationPage() {
         <div className="flex justify-end pt-1">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || fetching}
             className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2"
           >
             {loading ? (
@@ -139,7 +195,7 @@ export default function NewApplicationPage() {
                 <span className="animate-spin inline-block">&#x27F3;</span> Starting...
               </>
             ) : (
-              '✦ Generate CV & Cover Letter'
+              'Add Application'
             )}
           </button>
         </div>

@@ -3,24 +3,32 @@
 You are the orchestrator for a 3-agent job application pipeline. Your job is to coordinate the Analyzer, Writer, and ATS Checker agents in sequence, manage the feedback loop, and compile the final output.
 
 **Job input:** $ARGUMENTS
+**Skip analysis:** $SKIP_ANALYSIS
+**App ID:** $APP_ID
 
 ---
 
 ## Phase 1 — Analyze
 
+If **Skip analysis** is `true`: check whether `applications/$APP_ID-{SLUG}/brief.md` already exists (derive the slug from the job input). If the file exists, read it directly — do not spawn the Analyzer Agent. Extract the confirmed slug from the "Slug" field in the brief and proceed to Phase 2.
+
+If **Skip analysis** is `false` (or the brief file does not exist):
+
 Read the file `agents/analyzer.md`.
 
 Replace `{JOB_INPUT}` with: $ARGUMENTS
 Replace `{SLUG}` with a slug you derive from the company and role (lowercase kebab-case, e.g. `apple_senior-software-engineer`). If you cannot determine the role yet, use `apple_role` as a temporary placeholder — the Analyzer will correct it.
+Replace `{APP_ID}` with: $APP_ID
+Replace `{WEB_RESEARCH}` with: $WEB_RESEARCH
 
 Spawn the **Analyzer Agent** using the Agent tool with the fully constructed analyzer prompt. The agent has access to all tools (WebFetch, Read, Write, Bash).
 
 Wait for the Analyzer to complete. It will:
 - Fetch the JD if a URL was provided
-- Write `output/{SLUG}_brief.md`
+- Write `applications/$APP_ID-{SLUG}/brief.md`
 - Return the brief contents
 
-Read `output/{SLUG}_brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief.
+Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief.
 
 ---
 
@@ -29,13 +37,14 @@ Read `output/{SLUG}_brief.md` to confirm it was written. Extract the final slug 
 Read the file `agents/writer.md`.
 
 Replace `{SLUG}` with the confirmed slug from Phase 1.
+Replace `{APP_ID}` with: $APP_ID
 Replace `{GAPS}` with: *(empty — this is iteration 1)*
 
 Spawn the **Writer Agent** using the Agent tool with the fully constructed writer prompt. The agent has access to all tools (Read, Write, Bash).
 
 Wait for the Writer to complete. It will:
-- Write `output/{SLUG}_cv.tex`
-- Write `output/{SLUG}_cover_letter.tex`
+- Write `applications/$APP_ID-{SLUG}/cv.tex`
+- Write `applications/$APP_ID-{SLUG}/cover_letter.tex`
 - Return a summary of keywords targeted and any placeholders used
 
 ---
@@ -49,6 +58,7 @@ Run up to **3 iterations** of the following loop:
 Read the file `agents/ats_checker.md`.
 
 Replace `{SLUG}` with the confirmed slug.
+Replace `{APP_ID}` with: $APP_ID
 Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
 
 Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt. The agent has access to Read and Bash tools only — it does not write files.
@@ -58,7 +68,7 @@ Wait for the Checker to complete. It will return a structured score report with 
 ### Evaluate
 
 - If **score ≥ 80**: exit the loop. Proceed to Phase 4.
-- If **score < 80 and iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug). Then run the Checker again. Increment iteration count.
+- If **score < 80 and iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
 - If **score < 80 and iterations = 3**: exit the loop. Proceed to Phase 4 with a warning.
 
 Store each iteration's score for the final report.
@@ -70,15 +80,15 @@ Store each iteration's score for the final report.
 Run the following commands:
 
 ```bash
-cd /Users/khaled/Desktop/BatCave/Jobz && tectonic output/{SLUG}_cv.tex && tectonic output/{SLUG}_cover_letter.tex
+cd /Users/khaled/Desktop/BatCave/Jobz && tectonic applications/$APP_ID-{SLUG}/cv.tex && tectonic applications/$APP_ID-{SLUG}/cover_letter.tex
 ```
 
 If tectonic is not found, tell the user:
 ```
 tectonic is not installed. Run: brew install tectonic
 Then rerun the compilation manually:
-  tectonic output/{SLUG}_cv.tex
-  tectonic output/{SLUG}_cover_letter.tex
+  tectonic applications/$APP_ID-{SLUG}/cv.tex
+  tectonic applications/$APP_ID-{SLUG}/cover_letter.tex
 ```
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry compilation. Do not give up — diagnose and fix.
@@ -108,10 +118,10 @@ Score history: [e.g. 68 → 77 → 83]
 
 ────────────────────────────────────────
 GENERATED FILES
-  output/{SLUG}_cv.tex
-  output/{SLUG}_cv.pdf
-  output/{SLUG}_cover_letter.tex
-  output/{SLUG}_cover_letter.pdf
+  applications/$APP_ID-{SLUG}/cv.tex
+  applications/$APP_ID-{SLUG}/cv.pdf
+  applications/$APP_ID-{SLUG}/cover_letter.tex
+  applications/$APP_ID-{SLUG}/cover_letter.pdf
 
 ────────────────────────────────────────
 BEFORE YOU SEND — REVIEW THESE

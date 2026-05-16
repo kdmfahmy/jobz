@@ -27,7 +27,7 @@ function initSchema(db: Database.Database) {
       role                TEXT NOT NULL,
       jd_url              TEXT,
       jd_text             TEXT NOT NULL,
-      status              TEXT NOT NULL DEFAULT 'generating',
+      status              TEXT NOT NULL DEFAULT 'pending',
       ats_score           INTEGER,
       ats_breakdown       TEXT,
       job_match_score     INTEGER,
@@ -38,10 +38,11 @@ function initSchema(db: Database.Database) {
       updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `)
+  try { db.exec('ALTER TABLE applications ADD COLUMN pid INTEGER') } catch {}
 }
 
 export type ApplicationStatus =
-  | 'generating' | 'generated' | 'applied'
+  | 'pending' | 'generating' | 'generated' | 'applied'
   | 'interview' | 'offer' | 'rejected'
 
 export interface Application {
@@ -58,6 +59,7 @@ export interface Application {
   job_match_breakdown: string | null
   iterations: string | null
   log: string
+  pid: number | null
   created_at: string
   updated_at: string
 }
@@ -71,8 +73,8 @@ export function createApplication(data: {
 }): Application {
   const db = getDb()
   return db.prepare(`
-    INSERT INTO applications (slug, company, role, jd_url, jd_text)
-    VALUES (@slug, @company, @role, @jd_url, @jd_text)
+    INSERT INTO applications (slug, company, role, jd_url, jd_text, status)
+    VALUES (@slug, @company, @role, @jd_url, @jd_text, 'pending')
     RETURNING *
   `).get({ jd_url: null, ...data }) as Application
 }
@@ -104,10 +106,9 @@ export function updateApplication(
   `).get({ ...data, id }) as Application) ?? null
 }
 
-export function appendLog(id: number, chunk: string): void {
-  getDb().prepare(`
-    UPDATE applications
-    SET log = log || ?, updated_at = datetime('now')
-    WHERE id = ?
-  `).run(chunk, id)
+export function deleteApplication(id: number): boolean {
+  const result = getDb()
+    .prepare('DELETE FROM applications WHERE id = ?')
+    .run(id)
+  return result.changes > 0
 }

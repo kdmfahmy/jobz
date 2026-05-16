@@ -1,7 +1,7 @@
 // app/api/applications/[id]/status/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getApplication, updateApplication } from '@/lib/db'
-import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords, parseMatchedKeywords } from '@/lib/pipeline'
+import { parsePipelineSteps, parseAtsResult, parseCurrentAtsScore, parseMissingKeywords, parseMatchedKeywords, getStalledState, getCurrentRunLog, readPipelineLog } from '@/lib/pipeline'
 import { scoreJobMatch } from '@/lib/jobmatch'
 
 const scoringInFlight = new Set<number>()
@@ -11,20 +11,21 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const app = getApplication(Number(id))
   if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const steps = parsePipelineSteps(app.log)
-  const currentAtsScore = parseCurrentAtsScore(app.log)
-  const missingKeywords = parseMissingKeywords(app.log)
-  const matchedKeywords = parseMatchedKeywords(app.log)
-  const logLines = app.log.split('\n').filter(l => l.trim())
-  const logTail = logLines.slice(-20).join('\n')
+  const currentRunLog = getCurrentRunLog(readPipelineLog(app.id))
+  const steps = parsePipelineSteps(currentRunLog)
+  const currentAtsScore = parseCurrentAtsScore(currentRunLog)
+  const missingKeywords = parseMissingKeywords(currentRunLog)
+  const matchedKeywords = parseMatchedKeywords(currentRunLog)
+  const logLines = currentRunLog.split('\n').filter(l => l.trim())
+  const logTail = logLines.slice(-200).join('\n')
 
   // Detect completion and finalize scores if not yet done
-  if (app.status === 'generating' && app.log.includes('APPLICATION:') && !scoringInFlight.has(app.id)) {
+  if (app.status === 'generating' && currentRunLog.includes('APPLICATION:') && !scoringInFlight.has(app.id)) {
     scoringInFlight.add(app.id)
-    const atsResult = parseAtsResult(app.log)
+    const atsResult = parseAtsResult(currentRunLog)
     if (atsResult) {
       try {
-        const jobMatch = scoreJobMatch(app.slug)
+        const jobMatch = scoreJobMatch(app.id, app.slug)
         updateApplication(app.id, {
           status: 'generated',
           ats_score: atsResult.score,
@@ -49,22 +50,13 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     }
   }
 
-  // Detect pipeline failure — prevent stuck 'generating' status
-  const exitMatch = app.log.match(/\[PIPELINE_EXIT:(\d+)\]/)
-  if (app.status === 'generating' && exitMatch && exitMatch[1] !== '0') {
-    updateApplication(app.id, { status: 'generated' })
-  }
-
-  // Don't finalize pending apps — the Analyzer pre-run exit is not a pipeline completion
-  if (app.status === 'pending' && exitMatch) {
-    // Do nothing — pre-run completed, app stays pending until user clicks Generate
-  }
-
-  const freshApp = getApplication(Number(id))
+  const freshApp = getApplication(Number(id))!
+  const stalledState = getStalledState(freshApp)
 
   return NextResponse.json({
-    id: freshApp!.id,
-    status: freshApp!.status,
+    id: freshApp.id,
+    status: freshApp.status,
+    stalledState,
     steps,
     currentAtsScore,
     missingKeywords,

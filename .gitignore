@@ -31,3 +31,4 @@ portal/next-env.d.ts
 portal/jobz.db
 portal/jobz.db-shm
 portal/jobz.db-wal
+.pipeline-logs/

@@ -1,14 +1,15 @@
-// app/applications/[id]/progress/page.tsx
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { PipelineProgress } from '@/components/PipelineProgress'
-import { PipelineStep } from '@/lib/pipeline'
+import { PipelineStep, StalledState } from '@/lib/pipeline'
 
 interface StatusResponse {
   id: number
   status: 'generating' | 'generated' | 'applied' | 'interview' | 'offer' | 'rejected'
+  stalledState: StalledState | null
   steps: PipelineStep[]
   currentAtsScore: number | null
   missingKeywords: string[]
@@ -20,16 +21,16 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
   const [id, setId] = useState<string | null>(null)
   const [statusData, setStatusData] = useState<StatusResponse | null>(null)
   const [appInfo, setAppInfo] = useState<{ company: string; role: string } | null>(null)
-  const logRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLPreElement>(null)
+  const [logExpanded, setLogExpanded] = useState(false)
+  const [userScrolled, setUserScrolled] = useState(false)
 
-  // Resolve params (Promise in Next.js 15+)
   useEffect(() => {
     let cancelled = false
     params.then(p => { if (!cancelled) setId(p.id) })
     return () => { cancelled = true }
   }, [params])
 
-  // Fetch basic app info once id is resolved
   useEffect(() => {
     if (!id) return
     fetch(`/api/applications/${id}`)
@@ -38,12 +39,13 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
       .catch(() => {})
   }, [id])
 
-  // Auto-scroll log tail to bottom on update
+  // Auto-scroll to bottom unless user has scrolled up
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [statusData?.logTail])
+    if (!userScrolled && logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight
+    }
+  }, [statusData?.logTail, userScrolled])
 
-  // Poll status every 2 seconds
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -60,6 +62,9 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
           clearInterval(intervalId)
           router.push(`/applications/${id}`)
         }
+        if (data.stalledState === 'crashed') {
+          clearInterval(intervalId)
+        }
       } catch {}
     }
 
@@ -71,8 +76,15 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
     }
   }, [id, router])
 
+  const crashed = statusData?.stalledState === 'crashed'
+
   return (
-    <div className="max-w-lg">
+    <div>
+      {id && (
+        <Link href={`/applications/${id}`} className="text-slate-600 hover:text-slate-400 transition-colors block mb-4 text-base leading-none">
+          ←
+        </Link>
+      )}
       <div className="mb-6">
         {appInfo ? (
           <>
@@ -82,11 +94,26 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
         ) : (
           <div className="h-6 bg-slate-800 rounded w-48 animate-pulse" />
         )}
-        <div className="flex items-center gap-2 mt-3">
-          <span className="inline-block w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-sm text-amber-400 font-medium">Generating...</span>
+        <div className="flex items-center mt-3">
+          {crashed ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-red-500 rounded-full" />
+              <span className="text-sm text-red-400 font-medium">Pipeline crashed</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              <span className="text-sm text-amber-400 font-medium">Generating...</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {crashed && (
+        <div className="bg-red-950/40 border border-red-800 rounded-lg p-4 mb-5 text-sm text-red-300">
+          The pipeline exited with an error. Check the log below for details, then use the <strong>Restart</strong> button on the application page.
+        </div>
+      )}
 
       {statusData ? (
         <>
@@ -95,17 +122,59 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
             currentAtsScore={statusData.currentAtsScore}
             missingKeywords={statusData.missingKeywords}
           />
-          {statusData.logTail && (
-            <div className="mt-6">
-              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Live Output</div>
-              <div
-                ref={logRef}
-                className="bg-black/40 border border-slate-800 rounded-lg p-3 h-40 overflow-y-auto"
-              >
-                <pre className="font-mono text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">{statusData.logTail}</pre>
+
+          {/* Live log panel */}
+          <div className="mt-6">
+            <button
+              onClick={() => setLogExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800/60 transition-colors group"
+              style={{ borderRadius: logExpanded ? '8px 8px 0 0' : '8px' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="font-mono text-xs text-slate-500">$</span>
+                <span className="text-sm font-medium text-slate-300">Details</span>
+                {statusData.logTail && !logExpanded && (
+                  <span className="text-xs text-slate-600 font-mono truncate max-w-[200px]">
+                    {statusData.logTail.trim().split('\n').filter(Boolean).at(-1)?.slice(0, 60)}
+                  </span>
+                )}
               </div>
-            </div>
-          )}
+              <svg
+                className={`w-4 h-4 text-slate-500 transition-transform ${logExpanded ? 'rotate-180' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {logExpanded && (
+              <div className="border border-t-0 border-slate-800 rounded-b-lg overflow-hidden relative">
+                <pre
+                  ref={logRef}
+                  onScroll={e => {
+                    const el = e.currentTarget
+                    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+                    setUserScrolled(!atBottom)
+                  }}
+                  className="font-mono text-xs text-slate-400 leading-relaxed whitespace-pre-wrap bg-[#0d0d0d] p-4 overflow-y-auto"
+                  style={{ height: '480px' }}
+                >
+                  {statusData.logTail || '(waiting for output…)'}
+                </pre>
+                {userScrolled && (
+                  <button
+                    onClick={() => {
+                      setUserScrolled(false)
+                      if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+                    }}
+                    className="absolute bottom-4 right-6 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-full border border-slate-700 hover:bg-slate-700 transition-colors"
+                  >
+                    ↓ Jump to bottom
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </>
       ) : (
         <div className="space-y-4">

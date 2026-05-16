@@ -1,7 +1,6 @@
 // app/api/applications/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createApplication, listApplications } from '@/lib/db'
-import { spawnPipeline } from '@/lib/pipeline'
 
 export async function GET() {
   const apps = listApplications()
@@ -9,11 +8,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as {
-    company: string
-    role: string
-    jd_text: string
-    jd_url?: string
+  let body: { company: string; role: string; jd_text: string; jd_url?: string; web_research?: boolean }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
   if (!body.jd_text?.trim()) {
@@ -23,21 +22,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'company and role are required' }, { status: 400 })
   }
 
-  const slug = `${body.company}_${body.role}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+  const slugPart = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const slug = `${slugPart(body.company)}_${slugPart(body.role)}`
 
-  const app = createApplication({
-    slug,
-    company: body.company,
-    role: body.role,
-    jd_url: body.jd_url,
-    jd_text: body.jd_text,
-  })
-
-  // Fire-and-forget — pipeline runs in background
-  spawnPipeline(app.id, body.jd_url ?? body.jd_text)
-
-  return NextResponse.json(app, { status: 201 })
+  try {
+    const app = createApplication({
+      slug,
+      company: body.company,
+      role: body.role,
+      jd_url: body.jd_url,
+      jd_text: body.jd_text,
+    })
+    return NextResponse.json(app, { status: 201 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to create application'
+    const isDupe = msg.includes('UNIQUE')
+    return NextResponse.json(
+      { error: isDupe ? 'An application for this company and role already exists.' : msg },
+      { status: isDupe ? 409 : 500 }
+    )
+  }
 }

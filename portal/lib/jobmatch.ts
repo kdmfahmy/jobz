@@ -38,7 +38,7 @@ export function parseJobMatchResponse(output: string): JobMatchResult {
   throw new Error(`Could not parse job match JSON from output: ${output.slice(0, 200)}`)
 }
 
-export function scoreJobMatch(slug: string): JobMatchResult {
+export function scoreJobMatch(id: number, slug: string): JobMatchResult {
   const projectDir = process.env.PROJECT_ROOT ?? process.cwd()
 
   const profile = fs.readFileSync(
@@ -46,7 +46,7 @@ export function scoreJobMatch(slug: string): JobMatchResult {
     'utf-8'
   )
   const brief = fs.readFileSync(
-    path.join(projectDir, `output/${slug}_brief.md`),
+    path.join(projectDir, 'applications', `${id}-${slug}`, 'brief.md'),
     'utf-8'
   )
   const template = fs.readFileSync(

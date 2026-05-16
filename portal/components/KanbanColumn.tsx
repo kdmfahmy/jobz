@@ -3,6 +3,7 @@ import { Application, ApplicationStatus } from '@/lib/db'
 import { ApplicationCard } from './ApplicationCard'
 
 const COLUMN_LABELS: Record<ApplicationStatus, string> = {
+  pending:    'Pending',
   generating: 'Generating',
   generated:  'Generated',
   applied:    'Applied',
@@ -12,6 +13,7 @@ const COLUMN_LABELS: Record<ApplicationStatus, string> = {
 }
 
 const COLUMN_ACCENT: Record<ApplicationStatus, string> = {
+  pending:    'text-slate-500',
   generating: 'text-blue-400',
   generated:  'text-slate-300',
   applied:    'text-violet-400',
