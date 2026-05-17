@@ -130,6 +130,49 @@ Wait for the agent to complete and include its summary in the final report under
 
 ---
 
+## Phase 7 — Re-score Job Match
+
+Re-read `profile/base_profile.md` and `applications/{APP_ID}-{SLUG}/brief.md` (use the files as they exist now — Phase 6 may have updated the profile). Score the match across the same four dimensions as the initial pipeline:
+
+- **Skills (40%):** compare the candidate's technical skills and tools against the JD requirements — list matched skills and gaps
+- **Experience (35%):** assess years, seniority level, and domain relevance
+- **Education (15%):** degree field and level match
+- **Domain (10%):** industry and problem-space alignment
+
+Produce scores 0–100 for each dimension. Overall = Skills×0.4 + Experience×0.35 + Education×0.15 + Domain×0.10.
+
+Output the result as a log marker (replace the placeholders with your computed values):
+
+```
+[JOB_MATCH_START]
+{"overall": X, "breakdown": {"skills": {"score": X, "matched": ["skill1"], "gaps": ["gap1"]}, "experience": {"score": X, "notes": "one line"}, "education": {"score": X, "notes": "one line"}, "domain": {"score": X, "notes": "one line"}}}
+[JOB_MATCH_END]
+```
+
+Then persist it directly to the portal DB:
+
+```bash
+python3 - <<'PYEOF'
+import sqlite3, json
+
+overall = {OVERALL}
+breakdown = {BREAKDOWN_JSON}
+app_id = {APP_ID}
+
+db = sqlite3.connect("portal/jobz.db")
+db.execute(
+    "UPDATE applications SET job_match_score=?, job_match_breakdown=?, updated_at=datetime('now') WHERE id=?",
+    (overall, json.dumps(breakdown), app_id)
+)
+db.commit()
+print(f"Job match re-scored: {overall}")
+PYEOF
+```
+
+Replace `{OVERALL}` with the computed overall integer, `{BREAKDOWN_JSON}` with the breakdown dict literal, and `{APP_ID}` with {APP_ID}.
+
+---
+
 ## Orchestrator Rules
 - You coordinate — you do not write CV content yourself
 - Always wait for each agent to fully complete before spawning the next

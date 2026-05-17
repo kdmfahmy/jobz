@@ -130,7 +130,7 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
               className="w-full flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800/60 transition-colors group"
               style={{ borderRadius: logExpanded ? '8px 8px 0 0' : '8px' }}
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-slate-500">$</span>
                 <span className="text-sm font-medium text-slate-300">Details</span>
                 {statusData.logTail && !logExpanded && (
@@ -140,7 +140,8 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
                 )}
               </div>
               <svg
-                className={`w-4 h-4 text-slate-500 transition-transform ${logExpanded ? 'rotate-180' : ''}`}
+                className="text-slate-500 transition-transform flex-shrink-0"
+                style={{ width: '16px', height: '16px', transform: logExpanded ? 'rotate(180deg)' : undefined }}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -156,8 +157,8 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
                     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
                     setUserScrolled(!atBottom)
                   }}
-                  className="font-mono text-xs text-slate-400 leading-relaxed whitespace-pre-wrap bg-[#0d0d0d] p-4 overflow-y-auto"
-                  style={{ height: '480px' }}
+                  className="font-mono text-xs text-slate-400 leading-relaxed bg-[#0d0d0d] p-4"
+                  style={{ height: '480px', whiteSpace: 'pre-wrap', overflowY: 'auto' }}
                 >
                   {statusData.logTail || '(waiting for output…)'}
                 </pre>

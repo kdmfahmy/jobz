@@ -107,19 +107,16 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           {/* Documents */}
           <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4">
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Documents</div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               {[['CV', 'cv'], ['Cover Letter', 'cover_letter']].map(([label, file]) => (
-                <div key={file} className="bg-slate-800 rounded-lg p-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-semibold text-slate-200">{label}</div>
-                    <div className="text-xs text-slate-500">{file}.pdf</div>
-                  </div>
+                <div key={file} className="bg-slate-800 rounded-lg flex items-center justify-between" style={{ padding: '10px 14px' }}>
+                  <span className="text-sm font-semibold text-slate-200">{label}</span>
                   <div className="flex gap-1.5">
                     <a
                       href={`/applications/${id}-${app.slug}/${file}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-blue-900 text-blue-300 text-xs px-2 py-0.5 rounded hover:bg-blue-800"
+                      className="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded hover:bg-blue-800"
                     >
                       PDF
                     </a>
@@ -127,7 +124,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                       href={`/applications/${id}-${app.slug}/${file}.tex`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-slate-700 text-slate-400 text-xs px-2 py-0.5 rounded hover:bg-slate-600"
+                      className="bg-slate-700 text-slate-400 text-xs px-2 py-1 rounded hover:bg-slate-600"
                     >
                       TEX
                     </a>
@@ -195,7 +192,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       {/* Full JD */}
       <div className="bg-[#141414] border border-slate-800 rounded-lg p-4">
         <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Full Job Description</div>
-        <div className="text-xs text-slate-400 leading-relaxed max-h-96 overflow-y-auto whitespace-pre-wrap">
+        <div className="text-xs text-slate-400 leading-relaxed max-h-96 overflow-y-auto" style={{ whiteSpace: 'pre-wrap' }}>
           {app.jd_text}
         </div>
       </div>

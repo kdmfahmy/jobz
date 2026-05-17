@@ -7,7 +7,11 @@ const rl = readline.createInterface({ input: process.stdin })
 
 function summarizeInput(name, input) {
   if (!input || typeof input !== 'object') return ''
-  if (name === 'Bash') return String(input.command ?? '').slice(0, 300)
+  if (name === 'Bash') {
+    const cmd = String(input.command ?? '')
+    const firstLine = cmd.split('\n')[0]
+    return firstLine.length > 300 ? firstLine.slice(0, 300) + '…' : firstLine
+  }
   if (name === 'Agent') return String(input.description ?? input.subagent_type ?? '')
   if (name === 'Read' || name === 'Edit' || name === 'Write') return String(input.file_path ?? '')
   if (name === 'Skill') return String(input.skill ?? '')

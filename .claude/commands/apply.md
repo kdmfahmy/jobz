@@ -161,10 +161,25 @@ Then rerun the compilation manually:
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry compilation. Do not give up — diagnose and fix.
 
-If a portal record exists, mark it generated with the final ATS score:
+If a portal record exists, mark it generated with the full ATS result. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object with keys `keyword`, `quantified`, `sections`, `formatting`, `actionVerbs` and their integer values, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores (e.g. `[69, 86]`):
 
 ```bash
-sqlite3 portal/jobz.db "UPDATE applications SET status='generated', ats_score={FINAL_SCORE}, updated_at=datetime('now') WHERE id={APP_ID};"
+python3 - <<'PYEOF'
+import sqlite3, json
+
+ats_score = {FINAL_SCORE}
+ats_breakdown = {ATS_BREAKDOWN_JSON}
+iterations = {ITERATIONS_JSON}
+app_id = $APP_ID
+
+db = sqlite3.connect("portal/jobz.db")
+db.execute(
+    "UPDATE applications SET status='generated', ats_score=?, ats_breakdown=?, iterations=?, updated_at=datetime('now') WHERE id=?",
+    (ats_score, json.dumps(ats_breakdown), json.dumps(iterations), app_id)
+)
+db.commit()
+print(f"ATS result saved: {ats_score}/100")
+PYEOF
 ```
 
 ---

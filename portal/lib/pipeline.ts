@@ -200,9 +200,9 @@ export interface JobMatchBreakdown {
 }
 
 export function parseJobMatchResult(log: string): { overall: number; breakdown: JobMatchBreakdown } | null {
-  const m = log.match(/\[JOB_MATCH_START\]\n([\s\S]*?)\n\[JOB_MATCH_END\]/)
-  if (!m) return null
-  try { return JSON.parse(m[1]) } catch { return null }
+  const matches = [...log.matchAll(/\[JOB_MATCH_START\]\n([\s\S]*?)\n\[JOB_MATCH_END\]/g)]
+  if (!matches.length) return null
+  try { return JSON.parse(matches[matches.length - 1][1]) } catch { return null }
 }
 
 export function parseMatchedKeywords(log: string): string[] {
