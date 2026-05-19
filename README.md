@@ -14,24 +14,61 @@ AI-assisted job application pipeline built on Claude Code. Analyzes job postings
 
 ## Requirements
 
-### Local (macOS)
+### Local
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI (`npm install -g @anthropic-ai/claude-code`)
-- [tectonic](https://tectonic-typesetting.github.io/) for LaTeX compilation (`brew install tectonic` or download from GitHub releases)
-- Node.js 22+ (for the portal)
-- An `ANTHROPIC_API_KEY` set in your environment
+**Claude Code**
+```bash
+npm install -g @anthropic-ai/claude-code
+claude auth login
+```
+
+**tectonic** (LaTeX compiler)
+```bash
+# macOS
+brew install tectonic
+
+# Linux / Windows — download a binary from the releases page:
+# https://github.com/tectonic-typesetting/tectonic/releases
+```
+
+**Node.js 22+**
+```bash
+# macOS
+brew install node
+
+# or use nvm (any platform)
+nvm install 22 && nvm use 22
+```
 
 ### Docker (recommended for a clean environment)
 
-Docker and Docker Compose. Everything else is in the image.
+Install [Docker Desktop](https://www.docker.com/products/docker-desktop). Everything else is in the image — including tectonic and Node.js. You still need to run `claude auth login` on your host machine first so the container can inherit your auth from `~/.claude`.
 
 ---
 
 ## Setup
 
-### 1. Fill in your profile
+### 1. Build your profile
 
-Edit `profile/base_profile.md` — this is the single source of truth the AI draws from. It should contain your full work history, skills, education, and any other facts you want available for tailoring. Nothing will be fabricated; if it's not here, it won't appear in your CV.
+`profile/base_profile.md` is the single source of truth the AI draws from. Nothing will be fabricated — if it's not here, it won't appear in your CV.
+
+**Option A — Build from a CV file (recommended)**
+
+Drop your existing CV or resume into the `profile/` folder (PDF or DOCX), then run:
+
+```
+/build-profile
+```
+
+The builder reads your file, asks targeted questions to fill any gaps (metrics, team sizes, technologies), and writes `profile/base_profile.md` for you.
+
+**Option B — Write it manually**
+
+Create `profile/base_profile.md` directly. Include: full work history with responsibilities and metrics, all skills and technologies, education, and any projects or certifications. The more detail you provide, the better the tailoring.
+
+**Keeping it up to date**
+
+Run `/revise` with the update profile option after any CV revision to backport factual additions (new metrics, corrected numbers, added skills) into the base profile automatically.
 
 ### 2. Configure templates
 
@@ -54,9 +91,6 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Docker setup
 
 ```bash
-# Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
-
 # Build and start the container
 docker compose up -d
 
@@ -80,8 +114,8 @@ The container mounts the repo at `/workspace`, shares your `~/.claude` auth, and
 
 ### From the portal
 
-1. Open the portal, click **New Application**, paste the job URL or JD text, and submit.
-2. In Claude Code, run `/apply` — it picks up the pending portal record automatically.
+1. Open the portal, click **New Application**, fill in the job URL or JD text, and submit.
+2. On the application page, click **Generate CV & Cover Letter** — the pipeline runs from there.
 
 ### From Claude Code directly
 
@@ -101,6 +135,10 @@ Output files live in `applications/{id}-{slug}/`.
 
 ### Revising an existing application
 
+**From the portal** — open the application page, fill in the revision form at the bottom, and submit. The re-tailoring and ATS loop run automatically.
+
+**From Claude Code directly**
+
 ```
 /revise
 ```
@@ -112,8 +150,8 @@ Re-runs the Writer + ATS loop on an existing application. Useful after you've ed
 ## Project structure
 
 ```
-agents/           Agent prompts (analyzer, writer, ats_checker)
-.claude/commands/ Slash command orchestrators (apply, revise)
+agents/           Agent prompts (analyzer, writer, ats_checker, profile_builder)
+.claude/commands/ Slash command orchestrators (apply, revise, build_profile)
 applications/     Generated per-application files (gitignored by default)
 portal/           Next.js tracking app
 profile/          base_profile.md — your facts, never edited by the AI

@@ -86,12 +86,13 @@ function decodeEntities(s: string): string {
 
 function htmlToText(html: string): string {
   const text = html
+    // Decode entities first so entity-encoded tags like &lt;div&gt; are stripped below
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
     .replace(/<(script|style|nav|footer|header|noscript)[^>]*>[\s\S]*?<\/\1>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|h[1-6]|section|article)[^>]*>/gi, '\n')
+    .replace(/<\/?(p|div|ul|ol|li|h[1-6]|section|article)[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
     .replace(/\r/g, '')              // strip CR from CRLF line endings
     .replace(/ /g, ' ')         // normalize non-breaking spaces to regular spaces
     .replace(/[ \t]+/g, ' ')        // collapse horizontal whitespace
@@ -134,6 +135,26 @@ function extractDescriptionSection(html: string): string {
   return ''
 }
 
+// Greenhouse job-boards pages include the application form in the HTML.
+// Their public API returns clean JSON with just the job posting content.
+async function fetchGreenhouse(company: string, jobId: string): Promise<{ role: string; company: string; jd_text: string }> {
+  const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}`
+  const res = await fetch(apiUrl, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!res.ok) throw new Error(`Greenhouse API returned HTTP ${res.status}`)
+  const data = await res.json()
+  const role = typeof data.title === 'string' ? decodeEntities(data.title) : ''
+  const rawDesc = typeof data.content === 'string' ? data.content : ''
+  const jd_text = rawDesc ? htmlToText(rawDesc) : ''
+  return {
+    role,
+    company: company.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    jd_text,
+  }
+}
+
 // LinkedIn renders server-side blank pages — use their guest API instead
 async function fetchLinkedIn(jobId: string): Promise<{ role: string; company: string; jd_text: string }> {
   const apiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${jobId}`
@@ -167,6 +188,21 @@ async function fetchLinkedIn(jobId: string): Promise<{ role: string; company: st
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url')
   if (!url) return NextResponse.json({ error: 'url is required' }, { status: 400 })
+
+  // Greenhouse special case — job-boards.greenhouse.io/{company}/jobs/{id}
+  const ghBoardMatch = url.match(/job-boards\.greenhouse\.io\/([^/]+)\/jobs\/(\d+)/)
+    ?? url.match(/boards\.greenhouse\.io\/([^/]+)\/jobs\/(\d+)/)
+  if (ghBoardMatch) {
+    try {
+      const result = await fetchGreenhouse(ghBoardMatch[1], ghBoardMatch[2])
+      return NextResponse.json(result)
+    } catch (err) {
+      return NextResponse.json(
+        { error: `Could not fetch Greenhouse job: ${err instanceof Error ? err.message : err}` },
+        { status: 422 }
+      )
+    }
+  }
 
   // LinkedIn special case
   const linkedInMatch = url.match(/linkedin\.com\/jobs\/view\/(\d+)/)

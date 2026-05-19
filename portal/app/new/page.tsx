@@ -157,7 +157,7 @@ export default function NewApplicationPage() {
             onChange={e => handleJdChange(e.target.value)}
             placeholder="Paste the full job description here — title, responsibilities, requirements..."
             rows={8}
-            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-none"
+            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-y"
           />
         </div>
 
