@@ -167,6 +167,8 @@ Replace `{SLUG}` with the confirmed slug.
 Replace `{APP_ID}` with: $APP_ID
 Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
 
+Compile the CV and capture the page count, then replace `{PAGES}` in the checker prompt with the result (just the number, e.g. `1` or `2`; use `unknown` if pdfinfo fails):
+
 ```bash
 python3 -c "
 import datetime, sys
@@ -174,9 +176,11 @@ iteration = sys.argv[1]
 with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
     f.write(f'\n[PHASE: ats-check-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
 " "$ITERATION" 2>/dev/null || true
+tectonic applications/$APP_ID-$SLUG/cv.tex --outdir applications/$APP_ID-$SLUG/ 2>&1 | tail -3
+pdfinfo applications/$APP_ID-$SLUG/cv.pdf 2>/dev/null | grep "^Pages:" || echo "Pages: unknown"
 ```
 
-Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt. The agent has access to Read and Bash tools only — it does not write files.
+Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted). The agent has access to Read and Bash tools only — it does not write files.
 
 Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
 
@@ -208,7 +212,7 @@ After each Checker run, determine three things independently:
 
 If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
 
-1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes — **but it must never delete the people-leadership bullet of a leadership-titled role; if trimming would leave a leadership-titled role with no people-leadership signal, condense that bullet or fold the team-size/mentorship signal into another bullet instead of deleting it** (see the precedence rule in `agents/writer.md`).
+1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page. It must **prefer compressing or merging bullets over deleting them** — condensing two bullets into one tight line preserves keywords; outright deletion loses them. When a bullet must be cut, cut bullets that contain no ATS keywords from the brief first. Only cut keyword-bearing bullets as a last resort, and when doing so, try to fold the keyword into a surviving bullet rather than losing it entirely. **It must never delete the people-leadership bullet of a leadership-titled role; if trimming would leave a leadership-titled role with no people-leadership signal, condense that bullet or fold the team-size/mentorship signal into another bullet instead of deleting it** (see the precedence rule in `agents/writer.md`).
 2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
 3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
 4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.

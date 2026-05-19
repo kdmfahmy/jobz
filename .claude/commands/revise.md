@@ -14,20 +14,21 @@ You are the orchestrator for a targeted CV revision. The CV and cover letter hav
 Record this revision so it shows in the portal exactly like a portal-triggered revise — whether this run was spawned by the portal or started from the CLI. This appends the revision-history marker the portal parses and flips the application back into the pipeline. Run this once, before anything else.
 
 ```bash
-python3 -c "
-import sqlite3, os, sys
-app_id, feedback = sys.argv[1:]
-os.makedirs('.pipeline-logs', exist_ok=True)
-with open(f'.pipeline-logs/{app_id}.log', 'a') as f:
-    f.write(f'\n[REVISE REQUEST]\n{feedback}\n[/REVISE REQUEST]\n')
-try:
-    db = sqlite3.connect('portal/jobz.db')
-    db.execute(\"UPDATE applications SET status='generating', updated_at=datetime('now') WHERE id=?\", (int(app_id),))
-    db.commit()
-    print('Revision registered: history marker written, portal status set to generating')
-except Exception as e:
-    print(f'Warning: portal DB not updated ({e}) — revision will still run, it just will not show in the portal')
-" "{APP_ID}" "{FEEDBACK}"
+node -e "
+const fs = require('fs');
+const appId = '{APP_ID}';
+const feedback = {FEEDBACK_JSON};
+fs.mkdirSync('.pipeline-logs', { recursive: true });
+fs.appendFileSync('.pipeline-logs/' + appId + '.log', '\n[REVISE REQUEST]\n' + feedback + '\n[/REVISE REQUEST]\n');
+try {
+  const Database = require('./portal/node_modules/better-sqlite3');
+  const db = new Database('portal/jobz.db');
+  db.prepare(\"UPDATE applications SET status='generating', updated_at=datetime('now') WHERE id=?\").run(Number(appId));
+  console.log('Revision registered: history marker written, portal status set to generating');
+} catch (e) {
+  console.log('Warning: portal DB not updated (' + e.message + ') — revision will still run');
+}
+"
 ```
 
 If `portal/jobz.db` does not exist, the marker is still written to the log and the revision proceeds normally — it just will not appear in the portal. Do not abort.
@@ -85,6 +86,8 @@ Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
 Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
 
+Compile the CV and capture the page count, then replace `{PAGES}` in the checker prompt with the result (just the number, e.g. `1` or `2`; use `unknown` if pdfinfo fails):
+
 ```bash
 python3 -c "
 import datetime, sys
@@ -92,9 +95,11 @@ iteration = sys.argv[1]
 with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
     f.write(f'\n[PHASE: ats-check-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
 " "{ITERATION}" 2>/dev/null || true
+tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLUG}/ 2>&1 | tail -3
+pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf 2>/dev/null | grep "^Pages:" || echo "Pages: unknown"
 ```
 
-Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt. The agent has access to Read and Bash tools only.
+Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted). The agent has access to Read and Bash tools only.
 
 Wait for the Checker to complete.
 
@@ -125,7 +130,7 @@ After each Checker run, determine two things independently:
 
 If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
 
-1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes.
+1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page. It must **prefer compressing or merging bullets over deleting them** — condensing two bullets into one tight line preserves keywords; outright deletion loses them. When a bullet must be cut, cut bullets that contain no ATS keywords from the brief first. Only cut keyword-bearing bullets as a last resort, and when doing so, try to fold the keyword into a surviving bullet rather than losing it entirely.
 2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
 3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
 4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
@@ -168,7 +173,12 @@ If there are LaTeX errors, read the .tex file, fix the errors, and retry. Do not
 
 Persist the final ATS result to the portal DB. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object containing scores and one-line notes from the final checker report, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores.
 
-The breakdown JSON must include: `keyword`, `keywordNote`, `quantified`, `quantifiedNote`, `sections`, `sectionsNote`, `formatting`, `formattingNote`, `actionVerbs`, `actionVerbsNote`. Be specific in notes — matched keywords then missing ones for keyword, unquantified bullet examples for quantified, specific issues for formatting/verbs. These are displayed as captions under progress bars in the portal.
+The breakdown JSON must include these keys — be specific, the notes are displayed as captions in the portal:
+- `keyword` (int), `keywordNote` — matched keywords then missing ones, e.g. `"Python, Go, Kubernetes, CI/CD · Missing: eBPF, Production Evals"` or `"Python, Go · Missing (resolvable): eBPF · Missing (unresolvable): WorkOS, FooBar"`
+- `quantified` (int), `quantifiedNote` — unquantified bullet examples, e.g. `"Led a team of technical consultants"`
+- `sections` (int), `sectionsNote` — e.g. `"All sections present"` or `"Missing: Skills"`
+- `formatting` (int), `formattingNote` — e.g. `"OK"` or specific issues found
+- `actionVerbs` (int), `actionVerbsNote` — e.g. `"OK"` or weak openers found
 
 ```bash
 python3 - <<'PYEOF'

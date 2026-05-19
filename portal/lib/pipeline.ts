@@ -60,7 +60,7 @@ export const STALE_THRESHOLD_MS = 15 * 60 * 1000
 
 export function getCurrentRunLog(log: string): string {
   let latestIdx = -1
-  for (const marker of ['[RESTART:', '[REVISE REQUEST]', '[REVISE REQUEST:']) {
+  for (const marker of ['[RESTART:', '[REVISE REQUEST]', '[REVISE REQUEST:', '[PIPELINE_START:']) {
     const idx = log.lastIndexOf(marker)
     if (idx > latestIdx) latestIdx = idx
   }
@@ -274,6 +274,7 @@ export function spawnRevise(applicationId: number, slug: string, feedback: strin
   const prompt = reviseMd
     .replace(/\{SLUG\}/g, slug)
     .replace(/\{APP_ID\}/g, String(applicationId))
+    .replace(/\{FEEDBACK_JSON\}/g, JSON.stringify(feedback))
     .replace(/\{FEEDBACK\}/g, feedback)
     .replace(/\{UPDATE_PROFILE\}/g, updateProfile ? 'true' : 'false')
 

@@ -23,7 +23,7 @@ function SubBar({ title, score, max, note }: { title: string; score: number; max
       </div>
       {note && (
         <div className="text-xs mb-1">
-          {note.split(' · ').map((part, i) => (
+          {note.split(/\s*·\s*|\.\s+(?=[A-Z])/).map((part, i) => (
             <span key={i}>
               {i > 0 && <span className="text-slate-600"> · </span>}
               <span className={part.toLowerCase().startsWith('missing') || part.toLowerCase().startsWith('weak') || part.toLowerCase().startsWith('unquantified') ? 'text-red-400' : 'text-emerald-600'}>

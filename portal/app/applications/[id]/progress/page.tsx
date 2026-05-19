@@ -100,6 +100,11 @@ export default function ProgressPage({ params }: { params: Promise<{ id: string 
               <span className="inline-block w-2 h-2 bg-red-500 rounded-full" />
               <span className="text-sm text-red-400 font-medium">Pipeline crashed</span>
             </div>
+          ) : !statusData || statusData.logTail.trim() === '' ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-slate-500 rounded-full animate-pulse" />
+              <span className="text-sm text-slate-400 font-medium">Queued — waiting for agent to start…</span>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <span className="inline-block w-2 h-2 bg-amber-400 rounded-full animate-pulse" />

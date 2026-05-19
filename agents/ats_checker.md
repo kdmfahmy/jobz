@@ -14,16 +14,11 @@ You are an independent ATS (Applicant Tracking System) evaluator. You score CVs 
 
 ### 2. Check page length
 
-Compile the CV with tectonic and count the actual pages in the output PDF:
+The orchestrator has already compiled the CV. The page count is: **{PAGES}**
 
-```bash
-tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLUG}/ 2>&1
-pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf | grep "^Pages:"
-```
+If `{PAGES}` is greater than 1, flag a **PAGE OVERFLOW** warning. Include it as a gap in GAPS TO FIX.
 
-If the page count is greater than 1, flag a **PAGE OVERFLOW** warning. Include it as a gap.
-
-If tectonic fails (compilation error), fall back to structural estimation and flag a **PAGE OVERFLOW** warning if:
+If `{PAGES}` is `unknown` (compilation failed), fall back to structural estimation and flag a **PAGE OVERFLOW** warning if:
 - More than 3 roles are included, OR
 - The most recent role has more than 4 bullets, OR
 - Any older role has more than 2 bullets, OR
