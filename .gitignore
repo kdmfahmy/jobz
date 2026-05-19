@@ -37,7 +37,7 @@ portal/jobz.db-wal
 .pipeline-logs/
 
 # applications
-applications
+/applications
 
 # personal profile — contains career history
 profile/base_profile.md

@@ -12,7 +12,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - IS_SANDBOX=1   # allow `claude --dangerously-skip-permissions` under root in this disposable container
     command: >
-      bash -c "mkdir -p /Users/khaled && ln -sfn /root/.claude /Users/khaled/.claude && bash"
+      bash -c "mkdir -p ${HOME} && ln -sfn /root/.claude ${HOME}/.claude && bash"
     stdin_open: true
     tty: true
     working_dir: /workspace

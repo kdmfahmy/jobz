@@ -2,6 +2,8 @@
 
 AI-assisted job application pipeline built on Claude Code. Analyzes job postings, tailors CVs and cover letters, scores ATS fitness, and tracks applications through a Next.js portal.
 
+> **Warning:** the portal triggers Claude Code with `--dangerously-skip-permissions` to run the pipeline without interactive prompts. Only use this on your own machine or in an isolated environment — the provided Docker setup is recommended.
+
 ---
 
 ## What it does
