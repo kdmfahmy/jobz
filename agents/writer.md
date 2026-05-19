@@ -99,7 +99,7 @@ Tailoring rules:
 - Every keyword from the **ATS Keyword List** in the brief must appear somewhere in the CV — weave them naturally into bullets and the summary; never keyword-stuff
 - **Language must sound like the candidate, not the JD and not a template.** Read each bullet and ask: could this sentence have been lifted from the job posting? If yes, rewrite it from the candidate's experience angle. Bullets should describe *what was done and how*, not *what the role requires*. The voice calibration from the cover letter applies here too — reframings must sound like the candidate's natural way of expressing their work, not like a polished rewrite from an outside writer
 - Use the **Success Profile** and **Company Intelligence** sections from the brief to tune the professional summary and bullet emphasis — speak the company's language
-- Reorder bullet points within each role to surface what's most relevant to this JD first, using your confidence scores
+- Reorder bullet points within each role to surface what's most relevant to this JD first, using your confidence scores — **exception: for any role whose title signals leadership (Lead, Manager, Director, Head), the people-leadership bullet (team size, direct reports, mentorship) must always be the first bullet in that role**, regardless of JD relevance. Leadership scope establishes credibility for everything that follows.
 - Write the Professional Summary to speak directly to this role's level and domain, using terminology from the Company Intelligence section
 - Include only the 2 most relevant projects from the profile, 1 bullet each
 - Cut anything that doesn't support this application
