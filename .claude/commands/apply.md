@@ -45,6 +45,16 @@ Wait for the Analyzer to complete. It will:
 - Write `applications/$APP_ID-{SLUG}/brief.md`
 - Return the brief contents
 
+Append a phase heartbeat to the pipeline log:
+
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
+    f.write(f'\n[PHASE: analysis-complete @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
+
 Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief. Also extract **Company** and **Title** from the Role Info section.
 
 If a portal record was created in Phase 0, update it with the real data. Read `applications/{APP_ID}-{SLUG}/jd.txt` for the raw job description text:
@@ -128,6 +138,14 @@ Replace `{SLUG}` with the confirmed slug from Phase 1.
 Replace `{APP_ID}` with: $APP_ID
 Replace `{GAPS}` with: *(empty — this is iteration 1)*
 
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
+    f.write(f'\n[PHASE: writer-start @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
+
 Spawn the **Writer Agent** using the Agent tool with the fully constructed writer prompt. The agent has access to all tools (Read, Write, Bash).
 
 Wait for the Writer to complete. It will:
@@ -149,6 +167,15 @@ Replace `{SLUG}` with the confirmed slug.
 Replace `{APP_ID}` with: $APP_ID
 Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
 
+```bash
+python3 -c "
+import datetime, sys
+iteration = sys.argv[1]
+with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
+    f.write(f'\n[PHASE: ats-check-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" "$ITERATION" 2>/dev/null || true
+```
+
 Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt. The agent has access to Read and Bash tools only — it does not write files.
 
 Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
@@ -163,7 +190,18 @@ After each Checker run, determine three things independently:
 **Exit condition:** all three must be true. If any fails, treat it as a revision needed. A score ≥ 80 does NOT override a CRITICAL gap — a CRITICAL gap always forces another revision iteration, never a soft note to the user.
 
 - If **ATS pass AND page pass AND CRITICAL pass**: exit the loop. Proceed to Phase 4.
-- If **any fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
+- If **any fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Append a heartbeat:
+
+  ```bash
+  python3 -c "
+  import datetime, sys
+  iteration = sys.argv[1]
+  with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
+      f.write(f'\n[PHASE: writer-gap-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+  " "$ITERATION" 2>/dev/null || true
+  ```
+
+  Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
 - If **any fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below if a PAGE OVERFLOW remains. If a CRITICAL gap remains after iteration 3 (with no overflow), do not enter the trim loop — proceed to Phase 4 but treat the unresolved CRITICAL exactly like an unresolved overflow: surface it as a prominent **blocking** warning in the final report (not a soft "review this" note), and mark the application as needing manual fix before submission.
 
 ### Trim loop (page compliance enforcement)
@@ -185,6 +223,14 @@ Store each iteration's score for the final report.
 ---
 
 ## Phase 4 — Compile
+
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
+    f.write(f'\n[PHASE: compile @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
 
 Run the following commands:
 
