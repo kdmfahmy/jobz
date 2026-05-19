@@ -121,7 +121,12 @@ Page overflow is always listed first regardless of other scores.
 ```
 === ATS Check: Iteration {ITERATION} ===
 
-TOTAL SCORE: XX/100  [{PASS if ≥80, NEEDS REVISION if <80}]
+TOTAL SCORE: XX/100  [VERDICT]
+
+[VERDICT is PASS only if ALL hold: score ≥ 80 AND no PAGE OVERFLOW AND zero CRITICAL gaps.
+ Otherwise VERDICT is NEEDS REVISION — including when the score is ≥ 80 but a CRITICAL gap
+ exists. A CRITICAL gap blocks PASS regardless of the numeric score; the score never
+ overrides a CRITICAL.]
 
 --- Keyword Match: XX/35 ---
 Match rate: X of Y keywords (XX%)
@@ -164,8 +169,13 @@ OR
 4. [MED | EASY] Bullet starting "Responsible for maintenance..." — change opener to strong action verb (e.g. "Maintained", "Owned", "Delivered")
 5. [LOW | EASY] Add keyword "stakeholder management" — preferred qualification; can be added to summary
 
-[If score ≥ 80 AND no page overflow: write "None — score threshold met."]
-[If score ≥ 80 BUT page overflow exists: list only the overflow fix]
+[CRITICAL gaps from step 3 and step 4 (cover letter issues, content artifacts, career
+ narrative coherence — including a leadership-titled role with zero people-leadership
+ signal) MUST always be listed here, in full, regardless of the numeric score. The score
+ never suppresses a CRITICAL gap.]
+[If score ≥ 80 AND no page overflow AND zero CRITICAL gaps: write "None — score threshold met."]
+[If score ≥ 80 AND zero CRITICAL gaps BUT page overflow exists: list only the overflow fix]
+[If any CRITICAL gap exists: list every CRITICAL gap first (even at score ≥ 80), then any overflow fix]
 ```
 
 ## Rules

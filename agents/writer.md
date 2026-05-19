@@ -72,14 +72,16 @@ For roles at the same company, decide whether to consolidate or keep separate:
 
 **Keep separate when:** Responsibilities differed meaningfully, or one position has significantly more relevant experience worth spotlighting individually.
 
-For the candidate's Odoo roles (R&D Team Lead, Team Lead – Software Engineer, Software Engineer): if the target role values seniority progression, keep them separate to show growth. If the target role values depth in a single domain, consolidate into one entry with the current title and full date range, drawing bullets from all three tenures.
+For the candidate's Odoo roles (R&D Team Lead, Software Engineering Team Lead, Software Engineer): if the target role values seniority progression, keep them separate to show growth. If the target role values depth in a single domain, consolidate into one entry with the current title and full date range, drawing bullets from all three tenures.
 
 ### 5. Apply title reframing if appropriate
 
 The candidate's exact titles must be accurate, but emphasis can shift to highlight the most relevant aspect of the role:
-- "Team Lead – Software Engineer" → "Engineering Team Lead" (if leadership is the priority)
+- "Software Engineering Team Lead" → "Backend Engineering Team Lead" (if the role is backend-focused — sharpens the domain, stays accurate)
 - "Software Engineer" → "Full-Stack Engineer" (if stack breadth is the priority)
 - "R&D Team Lead" → "R&D Lead – MENA Localization" (if domain specificity helps)
+
+**A reframe may only sharpen or retarget a title — never broaden it or drop a word that carries accuracy.** Dropping "Software" from "Software Engineering Team Lead" to get "Engineering Team Lead" is not allowed: "Engineering" spans mechanical, electrical, civil, etc., so removing "Software" makes the title *less* accurate and overstates scope. Every reframed title must still be a truthful, equally-or-more-specific description of the same role at the same seniority.
 
 Only reframe if it makes the candidate more competitive. When in doubt, use the exact title from the profile.
 
@@ -89,11 +91,13 @@ Follow `templates/cv_style.md` exactly for formatting, structure, and the LaTeX 
 
 **Page constraint — non-negotiable: the CV must fit on exactly 1 page.**
 
+**Precedence under page pressure:** the 1-page limit and the people-leadership invariant (a leadership-titled role must have a people-leadership bullet, and it must be first — see the reorder rule and Career narrative coherence below) are BOTH absolute. When they conflict, the people-leadership invariant wins. The people-leadership bullet of a leadership-titled role is the one bullet you may never delete to save space — instead condense it (shorten the wording, or fold the team-size/mentorship signal into another bullet so the signal survives), cut a different bullet, drop a non-leadership role's bullet, or cut a section. A leadership-titled role must never end up with zero people-leadership signal because of trimming.
+
 Before writing, plan the content budget:
 - Count how many roles and bullets you intend to include
 - Apply the volume limits from the style guide: 3–4 bullets for the most recent role, 2–3 for older roles, 2-line summary
 - Every role must be self-explanatory with at least 2 bullets — never leave a role with a single bullet
-- If it won't fit, cut a bullet from the most recent role before cutting from an older one; cut sections (Projects, certifications) before thinning roles below 2 bullets
+- If it won't fit, cut a bullet from the most recent role before cutting from an older one; cut sections (Projects, certifications) before thinning roles below 2 bullets — but never cut the people-leadership bullet of a leadership-titled role (condense it instead, per the precedence rule above)
 
 Tailoring rules:
 - Every keyword from the **ATS Keyword List** in the brief must appear somewhere in the CV — weave them naturally into bullets and the summary; never keyword-stuff

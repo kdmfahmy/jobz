@@ -5,14 +5,17 @@ Use `tectonic`. Must compile in a single pass.
 
 ## Document Class & Packages
 ```latex
-\documentclass[10pt, letterpaper]{article}
-\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\documentclass[12pt, letterpaper]{article}
+\usepackage[top=1in, bottom=1in, left=1.1in, right=1.1in]{geometry}
 \usepackage{hyperref}
 \usepackage{parskip}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
+\linespread{1.12}
 \usepackage{xcolor}
 ```
+
+**Do not alter the font size, margins, or `\linespread` to make content fit.** These exact values (12pt, 1.1in side margins, 1.12 leading) are calibrated so that a 250–350 word body fills ~3/4–4/5 of the page and reads like a real business letter. A 10pt letter at this word count fills only ~60% of the page and looks thin and top-heavy — that is the defect these settings fix. If the letter runs long, cut words; if short, add substance. Never shrink the type to compensate.
 
 ## Page Constraint — HARD LIMIT
 **The cover letter must fill approximately 3/4 of a page — not more, not less.**
@@ -20,8 +23,9 @@ Use `tectonic`. Must compile in a single pass.
 - Too short (< 1/2 page) looks thin — fill it with substance, not padding
 - Too long (full page) looks wordy — cut ruthlessly
 - Target: header + body land at roughly the 3/4 mark, sign-off ends it cleanly
+- The page-fill comes from the calibrated typography above (12pt + 1.12 leading), not from padding or vertical spacing hacks
 
-Body word count: **250–350 words maximum** (not counting header, recipient block, subject line, or sign-off).
+Body word count: **250–350 words** (not counting header, recipient block, subject line, or sign-off). Aim for the upper half of that range (~300–340) so the calibrated typography lands the sign-off near the 3/4–4/5 mark.
 
 ## Visual Style
 - Clean, professional letter format

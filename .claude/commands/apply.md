@@ -155,27 +155,30 @@ Wait for the Checker to complete. It will return a structured score report with 
 
 ### Evaluate
 
-After each Checker run, determine two things independently:
+After each Checker run, determine three things independently:
 1. **ATS pass:** score ≥ 80
 2. **Page pass:** the report contains no PAGE OVERFLOW warning
+3. **CRITICAL pass:** the report's GAPS TO FIX section contains no CRITICAL gap
 
-**Exit condition:** both must be true. If either fails, treat it as a revision needed.
+**Exit condition:** all three must be true. If any fails, treat it as a revision needed. A score ≥ 80 does NOT override a CRITICAL gap — a CRITICAL gap always forces another revision iteration, never a soft note to the user.
 
-- If **ATS pass AND page pass**: exit the loop. Proceed to Phase 4.
-- If **either fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
-- If **either fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below.
+- If **ATS pass AND page pass AND CRITICAL pass**: exit the loop. Proceed to Phase 4.
+- If **any fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
+- If **any fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below if a PAGE OVERFLOW remains. If a CRITICAL gap remains after iteration 3 (with no overflow), do not enter the trim loop — proceed to Phase 4 but treat the unresolved CRITICAL exactly like an unresolved overflow: surface it as a prominent **blocking** warning in the final report (not a soft "review this" note), and mark the application as needing manual fix before submission.
 
 ### Trim loop (page compliance enforcement)
 
 If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
 
-1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes.
+1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes — **but it must never delete the people-leadership bullet of a leadership-titled role; if trimming would leave a leadership-titled role with no people-leadership signal, condense that bullet or fold the team-size/mentorship signal into another bullet instead of deleting it** (see the precedence rule in `agents/writer.md`).
 2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
 3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
 4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
 5. If PAGE OVERFLOW persists after 3 trim passes: proceed to Phase 4 with a prominent warning that the CV could not be trimmed to 1 page automatically — the user must review and trim manually before submitting.
 
 **Never proceed to Phase 4 silently with a PAGE OVERFLOW — always surface it clearly if it could not be resolved.**
+
+**Never proceed to Phase 4 silently with an unresolved CRITICAL gap. A CRITICAL gap is never demoted to a soft "BEFORE YOU SEND" / "SUBMISSION FLAG" advisory note — if it survives all iterations it must appear in the final report as a prominent blocking warning, and the application must be marked as requiring a manual fix before submission.**
 
 Store each iteration's score for the final report.
 
@@ -259,6 +262,13 @@ GENERATED FILES
   applications/$APP_ID-{SLUG}/cv.pdf
   applications/$APP_ID-{SLUG}/cover_letter.tex
   applications/$APP_ID-{SLUG}/cover_letter.pdf
+
+────────────────────────────────────────
+⛔ BLOCKING — FIX BEFORE SUBMITTING
+  [Only populated if an unresolved PAGE OVERFLOW or CRITICAL gap survived all iterations.
+   List each one verbatim from the final Checker report with the specific fix needed.
+   If none, omit this entire section. Never move a CRITICAL or overflow into the soft
+   "REVIEW THESE" list below — those are advisory only; this section is a hard blocker.]
 
 ────────────────────────────────────────
 BEFORE YOU SEND — REVIEW THESE
