@@ -50,9 +50,27 @@ Wait for the Checker to complete.
 
 ### Evaluate
 
-- If **score ≥ 80**: exit the loop. Proceed to Phase 4.
-- If **score < 80 and iterations < 3**: extract the GAPS TO FIX section. Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1). Then run the Checker again. Increment iteration count.
-- If **score < 80 and iterations = 3**: exit the loop with a warning. Proceed to Phase 4.
+After each Checker run, determine two things independently:
+1. **ATS pass:** score ≥ 80
+2. **Page pass:** the report contains no PAGE OVERFLOW warning
+
+**Exit condition:** both must be true. If either fails, treat it as a revision needed.
+
+- If **ATS pass AND page pass**: exit the loop. Proceed to Phase 4.
+- If **either fails AND iterations < 3**: extract the GAPS TO FIX section. Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1). Then run the Checker again. Increment iteration count.
+- If **either fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below.
+
+### Trim loop (page compliance enforcement)
+
+If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
+
+1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes.
+2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
+3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
+4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
+5. If PAGE OVERFLOW persists after 3 trim passes: proceed to Phase 4 with a prominent warning that the CV could not be trimmed to 1 page automatically — the user must review and trim manually before submitting.
+
+**Never proceed to Phase 4 silently with a PAGE OVERFLOW — always surface it clearly if it could not be resolved.**
 
 Store each iteration's score for the final report.
 
@@ -64,6 +82,8 @@ Run:
 
 ```bash
 cd /Users/khaled/Desktop/BatCave/Jobz && tectonic applications/{APP_ID}-{SLUG}/cv.tex && tectonic applications/{APP_ID}-{SLUG}/cover_letter.tex
+rm -f applications/{APP_ID}-{SLUG}/cv.aux applications/{APP_ID}-{SLUG}/cv.log applications/{APP_ID}-{SLUG}/cv.out
+rm -f applications/{APP_ID}-{SLUG}/cover_letter.aux applications/{APP_ID}-{SLUG}/cover_letter.log applications/{APP_ID}-{SLUG}/cover_letter.out
 ```
 
 If tectonic is not found, tell the user:
@@ -75,6 +95,27 @@ Then rerun the compilation manually:
 ```
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry. Do not give up.
+
+Persist the final ATS result to the portal DB. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object with keys `keyword`, `quantified`, `sections`, `formatting`, `actionVerbs` and their integer values, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores:
+
+```bash
+python3 - <<'PYEOF'
+import sqlite3, json
+
+ats_score = {FINAL_SCORE}
+ats_breakdown = {ATS_BREAKDOWN_JSON}
+iterations = {ITERATIONS_JSON}
+app_id = {APP_ID}
+
+db = sqlite3.connect("portal/jobz.db")
+db.execute(
+    "UPDATE applications SET ats_score=?, ats_breakdown=?, iterations=?, updated_at=datetime('now') WHERE id=?",
+    (ats_score, json.dumps(ats_breakdown), json.dumps(iterations), app_id)
+)
+db.commit()
+print(f"ATS result saved: {ats_score}/100")
+PYEOF
+```
 
 ---
 

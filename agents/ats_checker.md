@@ -38,8 +38,8 @@ Before scoring, check the CV for anything that would make it unfit for submissio
 - **Broken LaTeX:** commands that reference undefined macros, missing closing braces, or `\lorem`
 
 **Career narrative coherence** — read each role title against its bullets:
-- If a role title contains "Lead", "Manager", "Director", or any other explicit leadership signal, at least one bullet in that role must reflect leadership activity (team size, mentorship, direction, ownership). Flag as CRITICAL if a leadership-titled role has zero leadership signals in its bullets — it is incoherent to a recruiter.
-- Team size or scope mentions must appear at the earliest leadership role where they apply, not only in a later/more senior role. If the candidate led a team in role N and role N+1 (same company, promoted), role N should mention the team — not role N+1 alone.
+- If a role title contains "Lead", "Manager", "Director", or any other explicit leadership signal, at least one bullet in that role must reflect **people leadership** — explicit mention of team size, direct reports, mentorship, or hiring. Project ownership verbs like "Directed", "Owned", or "Led [a project]" do NOT count — they describe technical delivery, not people management. Flag as CRITICAL if a leadership-titled role has zero people-leadership signals in its bullets.
+- Team size must appear at the **earliest** role where it applied. If the candidate led a team of N people in role X, that team size belongs in role X — not only in a later more senior role. If it appears for the first time in the most senior role, flag as CRITICAL: it implies the candidate never led people until their last position, which contradicts an earlier leadership title.
 - Responsibilities should grow from older to newer roles. Flag if a senior role's bullets look more junior than an earlier role.
 
 **Visual formatting consistency** — read every role entry and flag if:

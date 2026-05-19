@@ -1,0 +1,22 @@
+services:
+  dev:
+    build: .
+    volumes:
+      - .:/workspace
+      - ${HOME}/.claude:/root/.claude   # Claude auth + config (directory)
+      - portal_modules:/workspace/portal/node_modules  # native rebuild for better-sqlite3
+      - portal_next:/workspace/portal/.next  # isolate Turbopack cache: container paths (/workspace) must not poison host's .next
+    ports:
+      - "3000:3000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - IS_SANDBOX=1   # allow `claude --dangerously-skip-permissions` under root in this disposable container
+    command: >
+      bash -c "mkdir -p /Users/khaled && ln -sfn /root/.claude /Users/khaled/.claude && bash"
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+
+volumes:
+  portal_modules:
+  portal_next:

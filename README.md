@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jobz
 
-## Getting Started
+AI-assisted job application pipeline built on Claude Code. Analyzes job postings, tailors CVs and cover letters, scores ATS fitness, and tracks applications through a Next.js portal.
 
-First, run the development server:
+---
+
+## What it does
+
+- `/apply` — full application pipeline: analyze JD → tailor CV + cover letter → ATS-score → compile PDFs → save to portal
+- `/revise` — re-tailor an existing application based on new feedback, with the same ATS loop
+- Portal (`portal/`) — Next.js app for tracking application state, viewing ATS scores, and browsing outputs
+
+---
+
+## Requirements
+
+### Local (macOS)
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI (`npm install -g @anthropic-ai/claude-code`)
+- [tectonic](https://tectonic-typesetting.github.io/) for LaTeX compilation (`brew install tectonic` or download from GitHub releases)
+- Node.js 22+ (for the portal)
+- An `ANTHROPIC_API_KEY` set in your environment
+
+### Docker (recommended for a clean environment)
+
+Docker and Docker Compose. Everything else is in the image.
+
+---
+
+## Setup
+
+### 1. Fill in your profile
+
+Edit `profile/base_profile.md` — this is the single source of truth the AI draws from. It should contain your full work history, skills, education, and any other facts you want available for tailoring. Nothing will be fabricated; if it's not here, it won't appear in your CV.
+
+### 2. Configure templates
+
+- `templates/cv_style.md` — LaTeX CV layout and formatting rules
+- `templates/cover_letter_style.md` — cover letter voice and structure
+- `templates/ats_rubric.md` — the scoring criteria used by the ATS checker
+
+### 3. Start the portal
 
 ```bash
+cd portal
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker setup
 
-## Learn More
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
 
-To learn more about Next.js, take a look at the following resources:
+# Build and start the container
+docker compose up -d
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Attach a shell
+docker compose exec dev bash
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Inside the container — start the portal
+cd portal && npm install && npm run dev &
 
-## Deploy on Vercel
+# Run Claude Code
+claude
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The container mounts the repo at `/workspace`, shares your `~/.claude` auth, and isolates `node_modules` and `.next` in named volumes so native binaries rebuild correctly for the container's architecture.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> On first run inside the container, Claude Code will prompt you to authenticate if `~/.claude` is empty.
+
+---
+
+## Running an application
+
+### From the portal
+
+1. Open the portal, click **New Application**, paste the job URL or JD text, and submit.
+2. In Claude Code, run `/apply` — it picks up the pending portal record automatically.
+
+### From Claude Code directly
+
+```
+/apply
+```
+
+Claude will ask for the job URL or JD text, then run the full pipeline:
+
+1. **Analyzer** — parses the JD, extracts keywords, writes a brief to `applications/{id}-{slug}/brief.md`
+2. **Writer** — tailors CV and cover letter to `applications/{id}-{slug}/cv.tex` and `cover_letter.tex`
+3. **ATS Checker** — scores the CV, flags gaps, runs up to 3 revision iterations (plus a trim loop if the CV overflows 1 page)
+4. **Compiler** — runs `tectonic` to produce PDFs
+5. **Portal update** — saves ATS score, breakdown, and iteration history
+
+Output files live in `applications/{id}-{slug}/`.
+
+### Revising an existing application
+
+```
+/revise
+```
+
+Re-runs the Writer + ATS loop on an existing application. Useful after you've edited `base_profile.md` or received feedback.
+
+---
+
+## Project structure
+
+```
+agents/           Agent prompts (analyzer, writer, ats_checker)
+.claude/commands/ Slash command orchestrators (apply, revise)
+applications/     Generated per-application files (gitignored by default)
+portal/           Next.js tracking app
+profile/          base_profile.md — your facts, never edited by the AI
+templates/        CV style, cover letter style, ATS rubric
+```
+
+---
+
+## Notes
+
+- The AI never fabricates facts. All CV content must exist in `base_profile.md`.
+- Placeholder text is never inserted into documents — if something is missing, it's omitted or flagged in a summary.
+- ATS loop exits when score ≥ 80 **and** the CV fits on 1 page. If neither condition is met after 3 iterations, a trim loop runs. If the CV still overflows after that, you're warned to trim manually.

@@ -47,19 +47,39 @@ Wait for the Analyzer to complete. It will:
 
 Read `applications/$APP_ID-{SLUG}/brief.md` to confirm it was written. Extract the final slug from the "Slug" field in the brief. Also extract **Company** and **Title** from the Role Info section.
 
-If a portal record was created in Phase 0, update it with the real data:
+If a portal record was created in Phase 0, update it with the real data. Read `applications/{APP_ID}-{SLUG}/jd.txt` for the raw job description text:
 
 ```bash
 python3 -c "
 import sqlite3, sys
 db = sqlite3.connect('portal/jobz.db')
-slug, company, role, brief_path, app_id = sys.argv[1:]
-jd_text = open(brief_path).read()
+slug, company, role, jd_path, app_id = sys.argv[1:]
+jd_text = open(jd_path).read()
 db.execute(\"UPDATE applications SET slug=?, company=?, role=?, jd_text=?, updated_at=datetime('now') WHERE id=?\",
            (slug, company, role, jd_text, int(app_id)))
 db.commit()
 print('Portal record updated')
-" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "applications/{APP_ID}-{SLUG}/brief.md" "{APP_ID}"
+" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "applications/{APP_ID}-{SLUG}/jd.txt" "{APP_ID}"
+```
+
+If APP_ID was provided externally (portal path — Phase 0 did not run), only update slug, company, and role — jd_text is already set:
+
+```bash
+python3 -c "
+import sqlite3, sys
+db = sqlite3.connect('portal/jobz.db')
+slug, company, role, app_id = sys.argv[1:]
+db.execute(\"UPDATE applications SET slug=?, company=?, role=?, updated_at=datetime('now') WHERE id=?\",
+           (slug, company, role, int(app_id)))
+db.commit()
+print('Portal record updated')
+" "{SLUG}" "{COMPANY}" "{ROLE_TITLE}" "{APP_ID}"
+```
+
+Delete `jd.txt` — it was only needed to populate the DB and is now redundant:
+
+```bash
+rm -f applications/{APP_ID}-{SLUG}/jd.txt
 ```
 
 Then compute the job match score directly — read `profile/base_profile.md` and the brief you just confirmed, and score the match across these four dimensions:
@@ -135,9 +155,27 @@ Wait for the Checker to complete. It will return a structured score report with 
 
 ### Evaluate
 
-- If **score ≥ 80**: exit the loop. Proceed to Phase 4.
-- If **score < 80 and iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
-- If **score < 80 and iterations = 3**: exit the loop. Proceed to Phase 4 with a warning.
+After each Checker run, determine two things independently:
+1. **ATS pass:** score ≥ 80
+2. **Page pass:** the report contains no PAGE OVERFLOW warning
+
+**Exit condition:** both must be true. If either fails, treat it as a revision needed.
+
+- If **ATS pass AND page pass**: exit the loop. Proceed to Phase 4.
+- If **either fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
+- If **either fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below.
+
+### Trim loop (page compliance enforcement)
+
+If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
+
+1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page by cutting the lowest-scoring bullets, making no other changes.
+2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
+3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
+4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
+5. If PAGE OVERFLOW persists after 3 trim passes: proceed to Phase 4 with a prominent warning that the CV could not be trimmed to 1 page automatically — the user must review and trim manually before submitting.
+
+**Never proceed to Phase 4 silently with a PAGE OVERFLOW — always surface it clearly if it could not be resolved.**
 
 Store each iteration's score for the final report.
 
@@ -149,6 +187,8 @@ Run the following commands:
 
 ```bash
 cd /Users/khaled/Desktop/BatCave/Jobz && tectonic applications/$APP_ID-{SLUG}/cv.tex && tectonic applications/$APP_ID-{SLUG}/cover_letter.tex
+rm -f applications/$APP_ID-{SLUG}/cv.aux applications/$APP_ID-{SLUG}/cv.log applications/$APP_ID-{SLUG}/cv.out
+rm -f applications/$APP_ID-{SLUG}/cover_letter.aux applications/$APP_ID-{SLUG}/cover_letter.log applications/$APP_ID-{SLUG}/cover_letter.out
 ```
 
 If tectonic is not found, tell the user:

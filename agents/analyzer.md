@@ -10,9 +10,15 @@ WEB_RESEARCH: {WEB_RESEARCH}
 
 ### Step 1 — Parse the job description
 
-If JOB_INPUT is a URL, use WebFetch to retrieve the full page. Extract only the job-relevant content (ignore nav, footers, cookie banners, etc.).
+If JOB_INPUT is a URL, use WebFetch to retrieve the full page.
 
-If JOB_INPUT is plain text, use it directly.
+**Title and company must come from the page itself — not the JD body:**
+- **Role title:** use the job posting's page heading or `<title>` tag — the prominent title displayed at the top of the listing. Do not use a title that appears only within the JD body text, which may include internal grading labels or phrasing differences. If the page title and the JD body title differ, the page title wins.
+- **Company:** use the company name as it appears on the page (logo alt text, page header, or `<title>` tag) — not how it might be referenced within the JD prose.
+
+Extract only the job-relevant content for the rest of the brief (ignore nav, footers, cookie banners, application form fields like name/email/phone inputs, "How did you hear about us?" dropdowns, self-identification questions, and any other UI chrome that is not part of the job description itself).
+
+If JOB_INPUT is plain text, use it directly — take the role title and company from the most prominent heading or first line. Discard any application form content that may have been included in the paste (input labels, field names, dropdown options, self-identification questions, etc.).
 
 Extract: role title, company, team, location, level, responsibilities, required qualifications, preferred qualifications, and all keywords.
 
@@ -61,7 +67,11 @@ Produce a concise success profile: what does a strong candidate for this specifi
 
 ## Output
 
-Run `mkdir -p applications/{APP_ID}-{SLUG}` to create the application directory, then produce a single structured Markdown file saved to: `applications/{APP_ID}-{SLUG}/brief.md`
+Run `mkdir -p applications/{APP_ID}-{SLUG}` to create the application directory.
+
+Save the raw job description text (the full extracted text from the URL fetch, or JOB_INPUT verbatim if it was plain text) to `applications/{APP_ID}-{SLUG}/jd.txt`. This is the unmodified job posting — do not summarize or restructure it.
+
+Then produce a single structured Markdown file saved to: `applications/{APP_ID}-{SLUG}/brief.md`
 
 The file must follow this exact structure:
 
@@ -69,9 +79,9 @@ The file must follow this exact structure:
 # Job Brief: {ROLE_TITLE}
 
 ## Role Info
-- **Title:** [exact public-facing title from the posting — do not append internal grade labels like "(Expert Manager)", "(L6)", or "(Band 5)" even if they appear elsewhere in the JD body]
+- **Title:** [title from the page heading or `<title>` tag — this is what the company publicly calls the role. If the page title and JD body title differ, use the page title. Strip internal grading labels like "(Expert Manager)", "(L6)", "(Band 5)" that appear in parentheses after the real title]
 - **Job ID:** [only if explicitly shown on the company's own careers page — never use a LinkedIn job ID]
-- **Company:** [company name]
+- **Company:** [company name as shown on the page header or `<title>` tag]
 - **Team / Org:** [team or org name if mentioned]
 - **Location:** [location or Remote]
 - **Level:** [e.g. Senior, Staff, Lead, IC — infer if not explicit]
