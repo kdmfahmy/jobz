@@ -9,9 +9,42 @@ You are the orchestrator for a targeted CV revision. The CV and cover letter hav
 
 ---
 
+## Phase 0 — Register the revision (portal visibility)
+
+Record this revision so it shows in the portal exactly like a portal-triggered revise — whether this run was spawned by the portal or started from the CLI. This appends the revision-history marker the portal parses and flips the application back into the pipeline. Run this once, before anything else.
+
+```bash
+python3 -c "
+import sqlite3, os, sys
+app_id, feedback = sys.argv[1:]
+os.makedirs('.pipeline-logs', exist_ok=True)
+with open(f'.pipeline-logs/{app_id}.log', 'a') as f:
+    f.write(f'\n[REVISE REQUEST]\n{feedback}\n[/REVISE REQUEST]\n')
+try:
+    db = sqlite3.connect('portal/jobz.db')
+    db.execute(\"UPDATE applications SET status='generating', updated_at=datetime('now') WHERE id=?\", (int(app_id),))
+    db.commit()
+    print('Revision registered: history marker written, portal status set to generating')
+except Exception as e:
+    print(f'Warning: portal DB not updated ({e}) — revision will still run, it just will not show in the portal')
+" "{APP_ID}" "{FEEDBACK}"
+```
+
+If `portal/jobz.db` does not exist, the marker is still written to the log and the revision proceeds normally — it just will not appear in the portal. Do not abort.
+
+---
+
 ## Phase 1 — Load Brief
 
 Read `applications/{APP_ID}-{SLUG}/brief.md`. This file already exists. Extract the role title, company, and keyword list for use in the final report.
+
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
+    f.write(f'\n[PHASE: brief-loaded @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
 
 ---
 
@@ -25,6 +58,14 @@ Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
 Replace `{FEEDBACK}` with: {FEEDBACK}
 Replace `{GAPS}` with: *(empty — this is iteration 1)*
+
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
+    f.write(f'\n[PHASE: writer-start @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
 
 Spawn the **Writer Agent** using the Agent tool with the fully constructed writer prompt. The agent has access to all tools (Read, Write, Bash).
 
@@ -44,6 +85,15 @@ Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
 Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
 
+```bash
+python3 -c "
+import datetime, sys
+iteration = sys.argv[1]
+with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
+    f.write(f'\n[PHASE: ats-check-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" "{ITERATION}" 2>/dev/null || true
+```
+
 Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt. The agent has access to Read and Bash tools only.
 
 Wait for the Checker to complete.
@@ -57,7 +107,18 @@ After each Checker run, determine two things independently:
 **Exit condition:** both must be true. If either fails, treat it as a revision needed.
 
 - If **ATS pass AND page pass**: exit the loop. Proceed to Phase 4.
-- If **either fails AND iterations < 3**: extract the GAPS TO FIX section. Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1). Then run the Checker again. Increment iteration count.
+- If **either fails AND iterations < 3**: extract the GAPS TO FIX section. Append a heartbeat:
+
+  ```bash
+  python3 -c "
+  import datetime, sys
+  iteration = sys.argv[1]
+  with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
+      f.write(f'\n[PHASE: writer-gap-{iteration} @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+  " "{ITERATION}" 2>/dev/null || true
+  ```
+
+  Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1). Then run the Checker again. Increment iteration count.
 - If **either fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below.
 
 ### Trim loop (page compliance enforcement)
@@ -77,6 +138,14 @@ Store each iteration's score for the final report.
 ---
 
 ## Phase 4 — Compile
+
+```bash
+python3 -c "
+import datetime
+with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
+    f.write(f'\n[PHASE: compile @ {datetime.datetime.utcnow().isoformat()}Z]\n')
+" 2>/dev/null || true
+```
 
 Run:
 
@@ -112,7 +181,7 @@ app_id = {APP_ID}
 
 db = sqlite3.connect("portal/jobz.db")
 db.execute(
-    "UPDATE applications SET ats_score=?, ats_breakdown=?, iterations=?, updated_at=datetime('now') WHERE id=?",
+    "UPDATE applications SET status='generated', ats_score=?, ats_breakdown=?, iterations=?, updated_at=datetime('now') WHERE id=?",
     (ats_score, json.dumps(ats_breakdown), json.dumps(iterations), app_id)
 )
 db.commit()
