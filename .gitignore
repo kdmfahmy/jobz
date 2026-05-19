@@ -46,3 +46,6 @@ profile/base_profile.md
 # superpowers skills — local tooling, not project code
 .superpowers/
 docs/superpowers/
+
+# local Claude settings — machine-specific, never commit
+.claude/settings.local.json

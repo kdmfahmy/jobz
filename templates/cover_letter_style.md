@@ -21,7 +21,7 @@ Use `tectonic`. Must compile in a single pass.
 - Too long (full page) looks wordy — cut ruthlessly
 - Target: header + body land at roughly the 3/4 mark, sign-off ends it cleanly
 
-Body word count: **220–260 words maximum** (not counting header, recipient block, subject line, or sign-off).
+Body word count: **250–350 words maximum** (not counting header, recipient block, subject line, or sign-off).
 
 ## Visual Style
 - Clean, professional letter format
@@ -30,7 +30,7 @@ Body word count: **220–260 words maximum** (not counting header, recipient blo
 ## Structure
 1. Sender info (name, email, phone, date) — top right
 2. Blank line
-3. Recipient block: `Hiring Manager` / `[Team Name] Team, [Company], [City, Country]`
+3. Recipient block: `Hiring Manager` / `[Company], [City, Country]` — do NOT include a team name. Product names, division names, and internal org labels (e.g. "WorkOS Team", "Platform Team") are omitted — they are not how hiring managers identify themselves externally and can read as awkward or incorrect.
 4. Blank line
 5. Subject line (bold): `Re: [Exact Job Title] — [Job ID if available]`
 6. Blank line

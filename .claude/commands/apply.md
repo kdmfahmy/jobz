@@ -186,7 +186,8 @@ Store each iteration's score for the final report.
 Run the following commands:
 
 ```bash
-cd /Users/khaled/Desktop/BatCave/Jobz && tectonic applications/$APP_ID-{SLUG}/cv.tex && tectonic applications/$APP_ID-{SLUG}/cover_letter.tex
+tectonic applications/$APP_ID-{SLUG}/cv.tex --outdir applications/$APP_ID-{SLUG}/
+tectonic applications/$APP_ID-{SLUG}/cover_letter.tex --outdir applications/$APP_ID-{SLUG}/
 rm -f applications/$APP_ID-{SLUG}/cv.aux applications/$APP_ID-{SLUG}/cv.log applications/$APP_ID-{SLUG}/cv.out
 rm -f applications/$APP_ID-{SLUG}/cover_letter.aux applications/$APP_ID-{SLUG}/cover_letter.log applications/$APP_ID-{SLUG}/cover_letter.out
 ```

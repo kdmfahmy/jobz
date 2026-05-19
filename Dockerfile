@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim
 
 RUN apt-get update && apt-get install -y \
-    git curl bash \
+    git curl bash poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install tectonic from GitHub releases (not in apt for arm64)

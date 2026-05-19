@@ -4,6 +4,7 @@ You are an independent ATS (Applicant Tracking System) evaluator. You score CVs 
 
 ## Input
 - **CV file:** `applications/{APP_ID}-{SLUG}/cv.tex` — read this; score the text content (ignore LaTeX commands when checking for keywords — check the rendered text they produce)
+- **Cover letter file:** `applications/{APP_ID}-{SLUG}/cover_letter.tex` — read this for the cover letter checks below
 - **Brief file:** `applications/{APP_ID}-{SLUG}/brief.md` — read this; the ATS Keyword List is the canonical list to score against
 - **Rubric:** `templates/ats_rubric.md` — follow this exactly
 
@@ -13,20 +14,32 @@ You are an independent ATS (Applicant Tracking System) evaluator. You score CVs 
 
 ### 2. Check page length
 
-Count the content in the CV:
-- Number of roles included
-- Total bullet points across all roles
-- Whether a Summary, Skills, Education, and Projects section are present
+Compile the CV with tectonic and count the actual pages in the output PDF:
 
-Estimate whether this would fit on 1 page given the style guide constraints (10pt font, 0.55in top/bottom margins, 0.7in side margins, `noitemsep` list spacing). Flag a **PAGE OVERFLOW** warning in the report if:
+```bash
+tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLUG}/ 2>&1
+pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf | grep "^Pages:"
+```
+
+If the page count is greater than 1, flag a **PAGE OVERFLOW** warning. Include it as a gap.
+
+If tectonic fails (compilation error), fall back to structural estimation and flag a **PAGE OVERFLOW** warning if:
 - More than 3 roles are included, OR
 - The most recent role has more than 4 bullets, OR
 - Any older role has more than 2 bullets, OR
 - The summary is more than 2 lines
 
-Include this as a gap if overflow is detected.
+### 3. Check cover letter length and structure
 
-### 3. Submission readiness check
+Read `applications/{APP_ID}-{SLUG}/cover_letter.tex`. Extract only the body paragraphs (everything between the subject line and the sign-off, excluding `\vspace`, `\textbf{Re:...}`, and the closing `Sincerely` block).
+
+Count body words and flag **COVER LETTER TOO SHORT** if below 250, or **COVER LETTER TOO LONG** if above 350.
+
+Count sentences in each body paragraph and flag **COVER LETTER THIN PARAGRAPH** for any body paragraph (opening, body 1, body 2) with fewer than 3 sentences. The closing paragraph is allowed 2 sentences.
+
+Include any cover letter issues as CRITICAL gaps — they block submission the same as a CV artifact.
+
+### 4. Submission readiness check
 
 Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score.
 
@@ -50,11 +63,11 @@ Before scoring, check the CV for anything that would make it unfit for submissio
 - The Education entry uses `\hfill` after a long degree name that would cause the year to wrap to the next line alone — Education must fit cleanly on two lines max
 - Any role entry deviates from the standard two-line pattern: `\noindent\textbf{Role} \hfill \textit{Start -- End}\\` then `\textit{Company} \hfill \textit{City, Country}`
 
-### 4. Extract the CV text
+### 5. Extract the CV text
 
 Read the .tex file. When checking for keyword presence, mentally render the LaTeX — i.e. check the text arguments of `\item`, `\section`, `\textbf{}`, etc. — not the LaTeX commands themselves.
 
-### 5. Score each category using `templates/ats_rubric.md`
+### 6. Score each category using `templates/ats_rubric.md`
 
 Work through each category methodically and explicitly:
 
@@ -80,7 +93,7 @@ Work through each category methodically and explicitly:
 - List the first word of every experience bullet
 - Flag any weak openers ("Responsible for", "Helped", "Worked on", "Assisted", "I ", etc.)
 
-### 6. Estimate impact and difficulty for each gap
+### 7. Estimate impact and difficulty for each gap
 
 Before writing the report, evaluate every gap you found:
 
@@ -103,7 +116,7 @@ Before writing the report, evaluate every gap you found:
 **Priority = Impact first, then Difficulty (easier fixes of equal impact go first).**
 Page overflow is always listed first regardless of other scores.
 
-### 7. Output the score report
+### 8. Output the score report
 
 ```
 === ATS Check: Iteration {ITERATION} ===

@@ -148,9 +148,9 @@ Run `mkdir -p applications/{APP_ID}-{SLUG}` then save to: `applications/{APP_ID}
 
 Follow `templates/cover_letter_style.md` exactly.
 
-**Page constraint: the cover letter must fill approximately 3/4 of a page — 220–260 words in the body.**
+**Page constraint: the cover letter must fill approximately 3/4 of a page — 250–350 words in the body.**
 
-- Address: Hiring Manager, [Team Name] Team, [Company] — use the team name and company from the brief; omit the team line entirely if no team name is mentioned
+- Address: `Hiring Manager` / `[Company], [City, Country]` — do NOT include a team name. Internal org labels (e.g. "Platform Team", "WorkOS Team") are omitted — they are not how hiring managers identify themselves externally and can read as awkward or incorrect if the internal label differs from how the team is known
 - Use the public-facing role title in the subject line — strip any internal grading labels in parentheses (e.g. "Expert Manager, Software Engineering", "L6", "Band 5") that appear after the actual title. These are the company's internal taxonomy and look odd in a cover letter.
 - Include a Job ID in the subject line only if the brief contains one from the company's own careers page. LinkedIn job IDs are meaningless to the hiring team — omit them. If no company Job ID is available, the subject line is just the role title.
 - Reference specific responsibilities and keywords from the brief naturally — address what the role cares about without quoting its own language back
@@ -158,7 +158,7 @@ Follow `templates/cover_letter_style.md` exactly.
 - No clichés — follow the style guide strictly
 - Read it aloud (mentally) — if it sounds like a job posting, a ChatGPT summary, or a generic professional letter, rewrite it
 - **Preserve the candidate's voice.** Before drafting, read the base profile bullets to calibrate how this person naturally writes — their vocabulary, sentence length, how they frame impact. Write the cover letter in that same register. A polished letter that sounds like "a cover letter" is a failure; it must sound like *this person* wrote it. If a sentence would fit in any applicant's letter, it's wrong.
-- Count your words before saving — if the body exceeds 260 words, cut
+- Count your words before saving — if the body exceeds 350 words, cut
 
 Save to: `applications/{APP_ID}-{SLUG}/cover_letter.tex`
 
@@ -177,7 +177,7 @@ Missing fields: [list any non-optional fields that were absent from the profile 
 
 ## Hard constraints
 - **CV must be 1 page — no exceptions**
-- **Cover letter body must be 220–260 words — no exceptions**
+- **Cover letter body must be 250–350 words — no exceptions**
 - **Never fabricate.** Every bullet, skill, title, and metric must be grounded in `profile/base_profile.md`. Reframing and emphasis shifts are allowed; invention is not. If a gap cannot be closed without fabrication, omit that bullet entirely and note it in the summary — never put placeholder text or annotations in the document.
 - Never ignore the keyword list — the ATS Checker will score against the exact same list
 - Never use first-person pronouns in CV bullets
