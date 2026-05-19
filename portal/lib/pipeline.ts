@@ -105,25 +105,30 @@ export function parsePipelineSteps(log: string): PipelineStep[] {
 
   // Step 1: Analyzer
   if (done('Analyzer Agent')) steps[0].status = 'in_progress'
-  if (done('_brief.md')) {
+  if (done('/brief.md')) {  // matches Write tool log: → Write: .../brief.md
     steps[0].status = 'done'
     steps[1].status = 'in_progress'
   }
 
-  // Step 2: Writer
-  if (done('Writer Agent') && steps[0].status === 'done') steps[1].status = 'in_progress'
-  if (done('_cv.tex') && done('_cover_letter.tex')) {
+  // Step 2: Writer — only advance to in_progress on first writer spawn (not re-iterations)
+  if (done('Writer Agent') && steps[0].status === 'done' && steps[1].status === 'pending') {
+    steps[1].status = 'in_progress'
+  }
+  // "ATS Checker" appears in orchestrator text right when the writer finishes
+  if (done('ATS Checker') && steps[0].status === 'done') {
     steps[1].status = 'done'
     steps[2].status = 'in_progress'
   }
 
-  // Step 3: ATS
-  if (done('ATS Check') && steps[1].status === 'done') steps[2].status = 'in_progress'
-  const iterMatch = log.match(/Iteration (\d+)/)
+  // Step 3: ATS — show the latest iteration number
+  const iterMatches = [...log.matchAll(/iteration (\d+)/gi)]
+  const iterMatch = iterMatches.at(-1)
   if (iterMatch && steps[2].status === 'in_progress') {
     steps[2].detail = `iteration ${iterMatch[1]} of 3`
   }
-  if (done('tectonic')) {
+  // Phase 4 tectonic runs from project root: "tectonic applications/..."
+  // Writer's tectonic runs from app dir: "cd .../app && tectonic cv.tex" — no "applications/" after tectonic
+  if (done('tectonic applications/')) {
     steps[2].status = 'done'
     steps[3].status = 'in_progress'
   }
