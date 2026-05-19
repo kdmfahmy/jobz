@@ -7,6 +7,25 @@ interface ScoreCardProps {
   iterations: number[]
 }
 
+function SubBar({ title, score, max, note }: { title: string; score: number; max: number; note?: string }) {
+  const pct = Math.round((score / max) * 100)
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-slate-400">{title}</span>
+        <span className="text-slate-200">{score}/{max}</span>
+      </div>
+      <div className="bg-slate-800 rounded h-1 mb-1 overflow-hidden">
+        <div
+          className={`h-full rounded ${pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {note && <div className="text-xs text-slate-500 mb-1">{note}</div>}
+    </div>
+  )
+}
+
 export function ScoreCard({ score, breakdown, iterations }: ScoreCardProps) {
   const pass = score >= 80
   return (
@@ -19,22 +38,15 @@ export function ScoreCard({ score, breakdown, iterations }: ScoreCardProps) {
           {pass ? 'PASS' : 'BELOW TARGET'}
         </span>
       </div>
-      <div className="bg-slate-800 rounded h-1.5 mb-3 overflow-hidden">
+      <div className="bg-slate-800 rounded h-1.5 mb-4 overflow-hidden">
         <div className="bg-blue-500 h-full rounded" style={{ width: `${score}%` }} />
       </div>
-      <div className="space-y-1.5">
-        {[
-          ['Keyword Match',           `${breakdown.keyword}/35`],
-          ['Quantified Achievements', `${breakdown.quantified}/25`],
-          ['Section Completeness',    `${breakdown.sections}/20`],
-          ['Formatting',              `${breakdown.formatting}/12`],
-          ['Action Verbs',            `${breakdown.actionVerbs}/8`],
-        ].map(([label, val]) => (
-          <div key={label} className="flex justify-between text-xs">
-            <span className="text-slate-400">{label}</span>
-            <span className="text-slate-200">{val}</span>
-          </div>
-        ))}
+      <div className="space-y-2.5">
+        <SubBar title="Keyword Match"           score={breakdown.keyword}    max={35} note={breakdown.keywordNote} />
+        <SubBar title="Quantified Achievements" score={breakdown.quantified}  max={25} note={breakdown.quantifiedNote} />
+        <SubBar title="Section Completeness"    score={breakdown.sections}   max={20} note={breakdown.sectionsNote} />
+        <SubBar title="Formatting"              score={breakdown.formatting} max={12} note={breakdown.formattingNote} />
+        <SubBar title="Action Verbs"            score={breakdown.actionVerbs} max={8} note={breakdown.actionVerbsNote} />
       </div>
       {iterations.length > 1 && (
         <div className="mt-3 pt-3 border-t border-slate-800">

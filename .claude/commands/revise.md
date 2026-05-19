@@ -96,7 +96,9 @@ Then rerun the compilation manually:
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry. Do not give up.
 
-Persist the final ATS result to the portal DB. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object with keys `keyword`, `quantified`, `sections`, `formatting`, `actionVerbs` and their integer values, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores:
+Persist the final ATS result to the portal DB. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object containing scores and one-line notes from the final checker report, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores.
+
+The breakdown JSON must include: `keyword`, `keywordNote`, `quantified`, `quantifiedNote`, `sections`, `sectionsNote`, `formatting`, `formattingNote`, `actionVerbs`, `actionVerbsNote`. Keep each note to one line — displayed as a caption under a progress bar in the portal.
 
 ```bash
 python3 - <<'PYEOF'

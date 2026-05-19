@@ -201,7 +201,16 @@ Then rerun the compilation manually:
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry compilation. Do not give up — diagnose and fix.
 
-If a portal record exists, mark it generated with the full ATS result. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object with keys `keyword`, `quantified`, `sections`, `formatting`, `actionVerbs` and their integer values, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores (e.g. `[69, 86]`):
+If a portal record exists, mark it generated with the full ATS result. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object containing scores and one-line notes extracted from the final checker report, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores (e.g. `[69, 86]`).
+
+The breakdown JSON must include these keys:
+- `keyword` (int), `keywordNote` (e.g. "21 of 30 keywords matched — missing: X, Y, Z")
+- `quantified` (int), `quantifiedNote` (e.g. "9 of 15 bullets quantified")
+- `sections` (int), `sectionsNote` (e.g. "All sections present" or "Missing: Skills")
+- `formatting` (int), `formattingNote` (e.g. "OK" or the first formatting issue found)
+- `actionVerbs` (int), `actionVerbsNote` (e.g. "OK" or "Weak opener: 'Responsible for...'")
+
+Keep each note to one line — it is displayed as a caption under a progress bar in the portal.
 
 ```bash
 python3 - <<'PYEOF'

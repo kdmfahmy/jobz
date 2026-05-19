@@ -39,10 +39,15 @@ export interface PipelineStep {
 
 export interface AtsBreakdown {
   keyword: number
+  keywordNote?: string
   quantified: number
+  quantifiedNote?: string
   sections: number
+  sectionsNote?: string
   formatting: number
+  formattingNote?: string
   actionVerbs: number
+  actionVerbsNote?: string
 }
 
 export interface AtsResult {
