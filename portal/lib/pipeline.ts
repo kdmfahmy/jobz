@@ -238,7 +238,7 @@ export function parseKeywordsFromBrief(briefText: string): KeywordGroup[] {
   for (const sub of subsections) {
     const lines = sub.trim().split('\n')
     const category = lines[0].trim()
-    const keywords = lines.slice(1).map(l => l.trim()).filter(l => l && !l.startsWith('#'))
+    const keywords = lines.slice(1).map(l => l.trim().replace(/^[-*]\s+/, '')).filter(l => l && !l.startsWith('#'))
     if (keywords.length) groups.push({ category, keywords })
   }
   return groups
