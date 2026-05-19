@@ -1,7 +1,7 @@
 // app/new/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function NewApplicationPage() {
@@ -11,6 +11,18 @@ export default function NewApplicationPage() {
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
   const [webResearch, setWebResearch] = useState(false)
+  const [jdHeight, setJdHeight] = useState(200)
+  const jdRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startH = jdRef.current?.offsetHeight ?? jdHeight
+    const onMove = (ev: MouseEvent) => setJdHeight(Math.max(80, startH + ev.clientY - startY))
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [jdHeight])
   const [fetching, setFetching] = useState(false)
   const [fetchError, setFetchError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -153,12 +165,19 @@ export default function NewApplicationPage() {
             Job Description
           </label>
           <textarea
+            ref={jdRef}
             value={jdText}
             onChange={e => handleJdChange(e.target.value)}
             placeholder="Paste the full job description here — title, responsibilities, requirements..."
-            rows={8}
-            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-y"
+            style={{ height: jdHeight }}
+            className="block w-full bg-[#141414] border border-slate-700 rounded-t-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 resize-none"
           />
+          <div
+            onMouseDown={handleDragStart}
+            className="w-full h-3 bg-slate-800 border border-t-0 border-slate-700 rounded-b-lg flex items-center justify-center cursor-ns-resize select-none hover:bg-slate-700 transition-colors"
+          >
+            <div className="w-8 h-0.5 bg-slate-600 rounded-full" />
+          </div>
         </div>
 
         {/* Web research toggle */}
