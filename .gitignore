@@ -38,3 +38,6 @@ portal/jobz.db-wal
 
 # applications
 applications
+
+# personal profile — contains career history
+profile/base_profile.md
