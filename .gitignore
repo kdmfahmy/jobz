@@ -41,3 +41,7 @@ applications
 
 # personal profile — contains career history
 profile/base_profile.md
+
+# superpowers skills — local tooling, not project code
+.superpowers/
+docs/superpowers/
