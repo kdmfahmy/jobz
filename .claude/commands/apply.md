@@ -203,14 +203,12 @@ If there are LaTeX errors, read the .tex file, fix the errors, and retry compila
 
 If a portal record exists, mark it generated with the full ATS result. Replace `{FINAL_SCORE}` with the final ATS score integer, `{ATS_BREAKDOWN_JSON}` with a JSON object containing scores and one-line notes extracted from the final checker report, and `{ITERATIONS_JSON}` with the JSON array of per-iteration scores (e.g. `[69, 86]`).
 
-The breakdown JSON must include these keys:
-- `keyword` (int), `keywordNote` (e.g. "21 of 30 keywords matched — missing: X, Y, Z")
-- `quantified` (int), `quantifiedNote` (e.g. "9 of 15 bullets quantified")
-- `sections` (int), `sectionsNote` (e.g. "All sections present" or "Missing: Skills")
-- `formatting` (int), `formattingNote` (e.g. "OK" or the first formatting issue found)
-- `actionVerbs` (int), `actionVerbsNote` (e.g. "OK" or "Weak opener: 'Responsible for...'")
-
-Keep each note to one line — it is displayed as a caption under a progress bar in the portal.
+The breakdown JSON must include these keys — be specific, the notes are displayed as captions in the portal:
+- `keyword` (int), `keywordNote` — matched keywords then missing ones, e.g. `"Python, Go, Kubernetes, CI/CD · missing: eBPF, Production Evals"`
+- `quantified` (int), `quantifiedNote` — e.g. `"9 of 15 bullets quantified · unquantified: 'Led a team of consultants', 'Improved performance'"` (list up to 3)
+- `sections` (int), `sectionsNote` — e.g. `"All sections present"` or `"Missing: Skills"`
+- `formatting` (int), `formattingNote` — e.g. `"OK"` or specific issues found, e.g. `"Missing italic dates on 2 roles"`
+- `actionVerbs` (int), `actionVerbsNote` — e.g. `"OK"` or `"Weak openers: 'Responsible for...', 'Helped with...'"` (list all weak openers)
 
 ```bash
 python3 - <<'PYEOF'

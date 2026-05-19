@@ -21,7 +21,18 @@ function SubBar({ title, score, max, note }: { title: string; score: number; max
           style={{ width: `${pct}%` }}
         />
       </div>
-      {note && <div className="text-xs text-slate-500 mb-1">{note}</div>}
+      {note && (
+        <div className="text-xs mb-1">
+          {note.split(' · ').map((part, i) => (
+            <span key={i}>
+              {i > 0 && <span className="text-slate-600"> · </span>}
+              <span className={part.toLowerCase().startsWith('missing') || part.toLowerCase().startsWith('weak') || part.toLowerCase().startsWith('unquantified') ? 'text-red-400' : 'text-emerald-600'}>
+                {part}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
