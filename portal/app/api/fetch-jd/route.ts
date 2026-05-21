@@ -1,5 +1,6 @@
 // app/api/fetch-jd/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { spawn } from 'child_process'
 
 function extractMeta(html: string, property: string): string {
   const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'))
@@ -78,16 +79,25 @@ function extractJsonLdJob(html: string): { role: string; company: string; jd_tex
   return null
 }
 
-function decodeEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', nbsp: ' ', quot: '"', apos: "'",
 }
 
-function htmlToText(html: string): string {
-  const text = html
-    // Decode entities first so entity-encoded tags like &lt;div&gt; are stripped below
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      const code = parseInt(hex, 16)
+      return code === 0x200b ? '' : String.fromCodePoint(code)
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = parseInt(dec, 10)
+      return code === 0x200b ? '' : String.fromCodePoint(code)
+    })
+    .replace(/&([a-zA-Z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m)
+}
+
+function htmlToTextRaw(html: string): string {
+  return decodeEntities(html)
     .replace(/<(script|style|nav|footer|header|noscript)[^>]*>[\s\S]*?<\/\1>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -99,7 +109,81 @@ function htmlToText(html: string): string {
     .replace(/^ +$/gm, '')          // blank out space-only lines (from <p> </p> spacers)
     .replace(/\n{3,}/g, '\n\n')
     .trim()
-  return text.slice(0, 12000)
+}
+
+function htmlToText(html: string): string {
+  return htmlToTextRaw(html).slice(0, 12000)
+}
+
+type JdExtraction = { role: string; company: string; jd_text: string }
+
+async function cleanWithClaude(pageText: string, url: string): Promise<JdExtraction | null> {
+  const prompt = `You are extracting clean job posting content from a fetched web page.
+
+Source URL: ${url}
+
+Return ONLY a JSON object with this exact shape, on a single line, with no markdown fences and no commentary before or after:
+{"role":"<job title>","company":"<company name>","jd_text":"<clean job description>"}
+
+Rules for jd_text:
+- Include only the job description prose: role overview, responsibilities, requirements, qualifications, preferred qualifications, benefits, "about the team", "why join us", "diversity & inclusion" sections.
+- Do NOT include the role title as a standalone heading at the very top (it's already in the role field). It IS fine for the role title to appear inside JD prose, e.g. "As a Solutions Engineer, you will..." — keep those mentions intact.
+- Do NOT include standalone metadata header blocks like "Location: X", "Employment Type: Y", "Job Code: Z", "Job ID", "Department", "Salary range" when they appear as a page-header listing. (If location is mentioned naturally inside a sentence in the JD prose, keep it.)
+- Strip site navigation, footers, language switchers, application form fields, cookie banners, social links, "Apply"/"Share"/"Save" UI text, breadcrumbs, copyright lines, "Search now" / "Join us" CTAs that are part of the site shell, and any other site chrome.
+- Preserve the original wording and structure of the job description. Do not paraphrase or summarize.
+
+Other rules:
+- company is the hiring company (e.g. "TikTok", "Apple") — not the job board.
+- If the page is not a job posting, return {"role":"","company":"","jd_text":""}.
+
+Page text:
+---
+${pageText.slice(0, 40000)}
+---`
+
+  return new Promise((resolve) => {
+    const proc = spawn(
+      'claude',
+      [
+        '-p', prompt,
+        '--model', 'claude-sonnet-4-6',
+        '--output-format', 'json',
+        '--dangerously-skip-permissions',
+      ],
+      { cwd: '/tmp', env: process.env, timeout: 60000 }
+    )
+
+    let stdout = ''
+    let stderr = ''
+    proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString() })
+    proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+
+    proc.on('error', (err) => {
+      console.error('[fetch-jd] claude spawn error:', err)
+      resolve(null)
+    })
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        console.error('[fetch-jd] claude exit', code, 'stderr:', stderr.slice(0, 500))
+        return resolve(null)
+      }
+      try {
+        const envelope = JSON.parse(stdout)
+        const result = typeof envelope?.result === 'string' ? envelope.result : ''
+        const stripped = result.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+        const parsed = JSON.parse(stripped)
+        resolve({
+          role: typeof parsed.role === 'string' ? parsed.role : '',
+          company: typeof parsed.company === 'string' ? parsed.company : '',
+          jd_text: typeof parsed.jd_text === 'string' ? parsed.jd_text : '',
+        })
+      } catch (err) {
+        console.error('[fetch-jd] could not parse claude output:', err, 'raw:', stdout.slice(0, 500))
+        resolve(null)
+      }
+    })
+  })
 }
 
 // Extract description from well-known container patterns used by major job boards.
@@ -242,7 +326,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ role: jsonLd.role, company, jd_text: jsonLd.jd_text })
   }
 
-  // Fallback: parse HTML meta/title tags
+  // Generic case: use Claude to extract clean role/company/jd_text from the page text.
+  // This handles JS-heavy SPAs (TikTok, etc.) that have no JSON-LD and no recognized
+  // JD container, where regex fallback dumps page chrome into jd_text.
+  const pageText = htmlToTextRaw(html)
+  const cleaned = await cleanWithClaude(pageText, url)
+  if (cleaned && (cleaned.role || cleaned.jd_text)) {
+    const company = cleaned.company || companyFromUrl(url)
+    return NextResponse.json({ role: cleaned.role, company, jd_text: cleaned.jd_text })
+  }
+
+  // Last-resort fallback if Claude failed: parse HTML meta/title tags + best-effort body
   const ogTitle = extractMeta(html, 'og:title')
   const pageTitle = extractTag(html, 'title')
   const h1 = extractTag(html, 'h1')
