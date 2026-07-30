@@ -10,7 +10,7 @@ Use the following preamble exactly:
 \documentclass[10pt, letterpaper]{article}
 \usepackage[top=0.55in, bottom=0.55in, left=0.7in, right=0.7in]{geometry}
 \usepackage{hyperref}
-\usepackage{fontawesome5}
+\usepackage{fontawesome}
 \usepackage{titlesec}
 \usepackage{enumitem}
 \usepackage{xcolor}
@@ -35,6 +35,18 @@ Use the following preamble exactly:
 ```
 
 After `\begin{document}`, add `\raggedright` to use left-aligned text throughout — avoids the uneven word spacing that full justification produces.
+
+## Header — Contact Line (use exactly this)
+
+```latex
+{\fontsize{14}{16}\selectfont\textbf{Khaled Afifi}}\\[2pt]
+\faEnvelope\ \href{mailto:kdmfahmy@gmail.com}{kdmfahmy@gmail.com} \quad
+\faPhone\ +971 566 292 118 \quad
+\faLinkedinSquare\ \href{https://linkedin.com/in/khaled-afifi-9469221aa}{linkedin.com/in/khaled-afifi-9469221aa} \quad
+\faMapMarker\ Dubai, UAE
+```
+
+Use `\faLinkedinSquare` (not `\faLinkedin`) and `\faMapMarker` (no asterisk) — these are the correct `fontawesome` v4 names.
 
 Do NOT use the `parskip` package — it adds unwanted paragraph gaps.
 
@@ -88,10 +100,11 @@ Rules:
 Education must fit on two lines at most — degree name and year on line 1, institution on line 2:
 ```latex
 \noindent\textbf{Degree Name} \hfill \textit{Mon YYYY -- Mon YYYY}\\
-Institution Name --- GPA: X.XX / 4.0
+Institution Name --- GPA: X.XX / 4.0 \quad UAE Golden Visa recipient for academic achievement
 ```
 Use the full date range (e.g. `Sep 2017 -- Dec 2021`), not just the graduation year — consistent with the job entry date format.
 Include GPA inline on the institution line, left-aligned (no `\hfill`).
+**Always append `\quad UAE Golden Visa recipient for academic achievement` after the GPA** — this credential must appear on every CV, on the education line. Never omit it and never shorten it.
 Never use `\hfill` after a long degree name — it will wrap and the date will appear alone on a new line.
 If the degree name is long, shorten it (e.g. "Dual B.Sc., Computer Engineering & Electrical Engineering").
 

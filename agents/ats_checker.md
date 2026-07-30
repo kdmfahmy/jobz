@@ -18,6 +18,13 @@ The orchestrator has already compiled the CV. The page count is: **{PAGES}**
 
 If `{PAGES}` is greater than 1, flag a **PAGE OVERFLOW** warning. Include it as a gap in GAPS TO FIX.
 
+If `{PAGES}` equals 1, also check for **PAGE UNDERFILL**: the CV must fill the page, not just fit within it. Flag a PAGE UNDERFILL warning (MED gap) if ANY of the following hold:
+- The most recent role has fewer than 4 bullets, OR
+- All roles are at their minimum bullet counts (most recent: 4, prior: 2, earlier: 1) AND all bullets are short (under ~20 words each), OR
+- Total bullet count across all experience roles is fewer than 7
+
+PAGE UNDERFILL is a MED gap — it does not block PASS but must appear in GAPS TO FIX so the writer can expand content.
+
 If `{PAGES}` is `unknown` (compilation failed), fall back to structural estimation and flag a **PAGE OVERFLOW** warning if:
 - More than 3 roles are included, OR
 - The most recent role has more than 4 bullets, OR
@@ -28,7 +35,7 @@ If `{PAGES}` is `unknown` (compilation failed), fall back to structural estimati
 
 Read `applications/{APP_ID}-{SLUG}/cover_letter.tex`. Extract only the body paragraphs (everything between the subject line and the sign-off, excluding `\vspace`, `\textbf{Re:...}`, and the closing `Sincerely` block).
 
-Count body words and flag **COVER LETTER TOO SHORT** if below 250, or **COVER LETTER TOO LONG** if above 350.
+Count body words and flag **COVER LETTER TOO SHORT** if below 220, or **COVER LETTER TOO LONG** if above 290.
 
 Count sentences in each body paragraph and flag **COVER LETTER THIN PARAGRAPH** for any body paragraph (opening, body 1, body 2) with fewer than 3 sentences. The closing paragraph is allowed 2 sentences.
 
@@ -70,6 +77,7 @@ Work through each category methodically and explicitly:
 - List every keyword from the brief's ATS Keyword List
 - For each keyword: mark ✓ (present in CV text) or ✗ (absent)
 - Apply the rubric score based on match percentage
+- **Domain/field alignment:** identify the company's industry from the brief (e.g., HR tech, fintech, ERP, logistics). Check whether the CV surfaces relevant domain experience from the candidate's background — even if it comes from a different product context (e.g., ERP includes HR, payroll, accounting modules). If the company's domain is reflected in the candidate's profile but absent from the CV, flag it as a keyword gap with impact HIGH and difficulty EASY (weave in the relevant domain terminology).
 
 **Quantified Achievements (25 pts):**
 - List every experience bullet point
@@ -150,9 +158,11 @@ Quantified: X of Y bullets (XX%)
 
 --- Page Length Check ---
 Roles included: X  |  Bullets (most recent role): X  |  Bullets (other roles): X each
-[OK — fits within 1-page budget]
+[OK — fits within 1-page budget and appears well-filled]
 OR
 ⚠ PAGE OVERFLOW — [specific reason, e.g. "4 roles included, reduce to 3" or "most recent role has 6 bullets, reduce to 4"]
+OR
+⚠ PAGE UNDERFILL — [specific reason, e.g. "most recent role has only 3 bullets — expand to 4–5" or "all roles at minimum bullets with short content — expand bullets or restore trimmed content"]
 
 --- GAPS TO FIX (for Writer Agent) ---
 [Ranked by priority: CRITICAL first, then HIGH impact, then by difficulty (EASY before HARD).
