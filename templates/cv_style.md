@@ -77,7 +77,7 @@ Never reduce font size below 10pt. Never reduce margins beyond the values above.
 - Clean, minimal, ATS-friendly (no tables, no columns, no fancy graphics)
 - Accent color: `#111111` (near-black) for section headers and rule lines — no blue anywhere
 - Links: `\hypersetup{hidelinks}` — no underline, no color
-- Font size: 10pt body, 14pt name header, 11pt section titles
+- Font size: 10pt body, 14pt name header, 10.5pt headline line, 11pt section titles
 
 ## Structure Order
 1. Header (Name, headline line, contact line with icons)

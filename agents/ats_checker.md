@@ -43,7 +43,7 @@ Include any cover letter issues as CRITICAL gaps — they block submission the s
 
 ### 4. Submission readiness check
 
-Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score.
+Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score. (Exception: the Headline check below is HIGH, not CRITICAL.)
 
 **Content artifacts:**
 - **Bracket artifacts:** any `[`, `]` appearing as placeholders or unfilled instructions (e.g. `[ESTIMATE`, `[FILL IN`, `[Team Name`, `[Company`, `[TODO`)
