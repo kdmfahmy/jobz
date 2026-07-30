@@ -157,7 +157,7 @@ Frame the candidate as a technical leader who stays close to the code. Emphasize
 | Software Engineering Team Lead | Software Engineer, Tech Lead |
 | Software Engineer | Client Solution Developer |
 
-"Client Solution Developer" is an official alternate title for the first role — it is accurate, not a reframe. Frame the candidate as an engineer who ships production systems AND sits across the table from clients: lead with client-facing evidence (C-suite counterparts, escalation handling, on-site go-lives with post-go-live on-call, requirements→technical translation — see the profile's "Client-Facing & Consulting Experience" section, including its anecdote). NEVER title any role "Forward Deployed Engineer" or claim he worked as one — the honest pitch is a software engineer / tech lead who regularly worked directly with enterprise clients.
+"Client Solution Developer" is an official alternate title for the first role — it is accurate, not a reframe. Frame the candidate as an engineer who ships production systems AND sits across the table from clients: lead with client-facing evidence (C-suite counterparts, escalation handling, on-site go-lives with post-go-live on-call, requirements→technical translation — see the profile's "Client-Facing & Consulting Experience" section, including its anecdote). NEVER title any Work Experience role "Forward Deployed Engineer" — employment verification will contradict it. The headline and professional summary, however, MAY identify him as a forward-deployed engineer when the target is FDE-style and the claim passes the Defensibility Framework, grounded in the profile's "Client-Facing & Consulting Experience" section (embedded delivery, C-suite escalations, on-site go-lives, post-go-live on-call).
 
 Each Odoo role has a distinct title; writing the same title for two consecutive roles is an error.
 
@@ -176,6 +176,10 @@ If this is a revision ({FEEDBACK} or {GAPS} is not empty), determine which files
 Never touch a file that is not in scope for this revision.
 
 Follow `templates/cv_style.md` exactly for formatting, structure, and the LaTeX preamble.
+
+**Headline:** immediately under the name, write a one-line professional headline mirroring the JD's role identity when defensible (see `templates/cv_style.md` for the LaTeX pattern) — e.g. "Forward-Deployed Software Engineer — Enterprise Client Delivery" or "Senior Backend Engineer — Payments & Compliance". The headline is a self-descriptor, not an employment title; it must pass the Defensibility Framework. Every CV gets a headline.
+
+**Golden Visa placement:** if the role's location in the brief is in the UAE or GCC, append "UAE Golden Visa" to the header contact line after "Dubai, UAE" (see `templates/cv_style.md` for the exact pattern); otherwise leave the contact line clean. If the brief lacks a location, leave it clean. The education-line mention stays in every CV either way.
 
 **Page constraint — non-negotiable: the CV must fit on exactly 1 page and fill it.**
 
@@ -269,6 +273,7 @@ After saving both files, output:
 CV written: applications/{APP_ID}-{SLUG}/cv.tex
 Cover letter written: applications/{APP_ID}-{SLUG}/cover_letter.tex
 Keywords targeted: [list the keywords from the brief that you wove into the CV]
+Defensibility calls: [every judged claim — labels mirrored, characterizations used, labels rejected as not defensible — each with its grounding in the profile]
 Reframings applied: [list any bullets you reframed and why]
 Role consolidation: [kept separate / consolidated — brief rationale]
 Quantities omitted: [list any bullets where a specific number wasn't available and natural language was used instead]
