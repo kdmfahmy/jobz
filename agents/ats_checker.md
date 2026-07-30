@@ -65,6 +65,8 @@ Before scoring, check the CV for anything that would make it unfit for submissio
 - The Education entry uses `\hfill` after a long degree name that would cause the year to wrap to the next line alone — Education must fit cleanly on two lines max
 - Any role entry deviates from the standard two-line pattern: `\noindent\textbf{Role} \hfill \textit{Start -- End}\\` then `\textit{Company} \hfill \textit{City, Country}`
 
+**Headline check (HIGH, not CRITICAL):** the header must contain a one-line professional headline directly under the name (italic line before the contact line). If absent, add a gap: `[HIGH | EASY] Missing professional headline under the name — add a one-line self-descriptor mirroring the JD role identity (see templates/cv_style.md)`. This does not block PASS on its own.
+
 ### 5. Extract the CV text
 
 Read the .tex file. When checking for keyword presence, mentally render the LaTeX — i.e. check the text arguments of `\item`, `\section`, `\textbf{}`, etc. — not the LaTeX commands themselves.
@@ -188,5 +190,5 @@ OR
 - Do not hallucinate keywords into the CV that aren't there
 - The GAPS TO FIX section must be specific enough for the Writer Agent to act on without ambiguity
 - **Page overflow is always a gap — even if the ATS score is ≥ 80, flag it and include it in GAPS TO FIX**
-- **Truthfulness constraint: every suggestion must be achievable from the candidate's actual experience in `profile/base_profile.md`. Do not suggest adding skills, roles, or achievements that are not evidenced there. If a required keyword has no basis in the profile, flag it as an unresolvable gap — do not instruct the Writer to invent it.**
+- **Truthfulness constraint: every suggestion must be achievable from the candidate's actual experience in `profile/base_profile.md`. Do not suggest adding skills, roles, or achievements that are not evidenced there. If a required keyword has no basis in the profile, flag it as an unresolvable gap — do not instruct the Writer to invent it. A mirrored JD role label in the headline or professional summary that is grounded in the profile (e.g. a forward-deployed-engineer self-descriptor backed by the client-embedded delivery experience) is a defensible claim under the Writer's Defensibility Framework, not a fabrication — do not flag it. Work Experience section titles are still held to the approved title stacks.**
 - Output the full report as your response — it will be read by the orchestrator
