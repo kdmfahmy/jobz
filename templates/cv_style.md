@@ -36,15 +36,26 @@ Use the following preamble exactly:
 
 After `\begin{document}`, add `\raggedright` to use left-aligned text throughout — avoids the uneven word spacing that full justification produces.
 
-## Header — Contact Line (use exactly this)
+## Header — Name, Headline, Contact Line (use exactly this)
 
 ```latex
 {\fontsize{14}{16}\selectfont\textbf{Khaled Afifi}}\\[2pt]
+{\fontsize{10.5}{12}\selectfont\textit{Forward-Deployed Software Engineer --- Enterprise Client Delivery}}\\[3pt]
 \faEnvelope\ \href{mailto:kdmfahmy@gmail.com}{kdmfahmy@gmail.com} \quad
 \faPhone\ +971 566 292 118 \quad
 \faLinkedinSquare\ \href{https://linkedin.com/in/khaled-afifi-9469221aa}{linkedin.com/in/khaled-afifi-9469221aa} \quad
 \faMapMarker\ Dubai, UAE
 ```
+
+**Headline line (required on every CV):** the second line is a one-line professional headline chosen by the Writer to mirror the JD's role identity when defensible (per the Defensibility Framework in `agents/writer.md`). The text above is an example — replace it per application. It is part of the header and is never trimmed for page fit.
+
+**Golden Visa (conditional):** for UAE/GCC-located roles ONLY, the contact line's location segment becomes:
+
+```latex
+\faMapMarker\ Dubai, UAE --- UAE Golden Visa
+```
+
+For all other locations (or when the role location is unknown), keep `\faMapMarker\ Dubai, UAE` unchanged. The education-line Golden Visa mention stays in every CV regardless.
 
 Use `\faLinkedinSquare` (not `\faLinkedin`) and `\faMapMarker` (no asterisk) — these are the correct `fontawesome` v4 names.
 
@@ -69,7 +80,7 @@ Never reduce font size below 10pt. Never reduce margins beyond the values above.
 - Font size: 10pt body, 14pt name header, 11pt section titles
 
 ## Structure Order
-1. Header (Name, contact line with icons)
+1. Header (Name, headline line, contact line with icons)
 2. Professional Summary (2 lines max — tight)
 3. Work Experience (reverse chronological, last 2–3 roles only)
 4. Skills (one line per category, 3 categories max)
@@ -137,6 +148,8 @@ Before saving the .tex file, verify every item below. Do not skip any check.
 **Overall:**
 - [ ] All role entries use identical LaTeX structure (same line pattern, same `\hfill` usage)
 - [ ] No section has different spacing treatment than others
+- [ ] Headline line is present directly under the name, italic, 10.5pt
+- [ ] Golden Visa appears on the contact line ONLY for UAE/GCC-located roles; education-line mention present in all cases
 
 ## Content Volume Limits (enforce strictly)
 
