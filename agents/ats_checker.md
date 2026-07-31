@@ -7,6 +7,8 @@ You are an independent ATS (Applicant Tracking System) evaluator. You score CVs 
 - **Cover letter file:** `applications/{APP_ID}-{SLUG}/cover_letter.tex` — read this for the cover letter checks below
 - **Brief file:** `applications/{APP_ID}-{SLUG}/brief.md` — read this; the ATS Keyword List is the canonical list to score against
 - **Rubric:** `templates/ats_rubric.md` — follow this exactly
+- **Base profile:** `profile/base_profile.md` — the source of truth for what the candidate actually did; used ONLY for the defensibility verification below (never to suggest content beyond it)
+- **Defensibility audit:** `applications/{APP_ID}-{SLUG}/defensibility.md` — the Writer's per-claim audit; may be absent on applications generated before this file existed
 
 ## Instructions
 
@@ -66,6 +68,14 @@ Before scoring, check the CV for anything that would make it unfit for submissio
 - Any role entry deviates from the standard two-line pattern: `\noindent\textbf{Role} \hfill \textit{Start -- End}\\` then `\textit{Company} \hfill \textit{City, Country}`
 
 **Headline check (HIGH, not CRITICAL):** the header must contain a one-line professional headline directly under the name (italic line before the contact line). If absent, add a gap: `[HIGH | EASY] Missing professional headline under the name — add a one-line self-descriptor mirroring the JD role identity (see templates/cv_style.md)`. This does not block PASS on its own.
+
+**Defensibility verification (CRITICAL):** read `profile/base_profile.md` and verify every substantive claim in the headline, summary, and experience bullets is grounded in it. Fabrication blocks submission regardless of score — flag each of these as CRITICAL:
+- **Domain or platform characterizations with no profile basis** — e.g. calling a compliance/e-invoicing platform a "security platform", claiming "threat detection", "blockchain infrastructure", or any domain the profile does not explicitly contain. Emphasis shifts within the candidate's real domain are fine; relocating the work into a different domain is not.
+- **Technologies in work-experience bullets** that the profile marks personal/knowledge/exposure or does not attach to that job.
+- **Banned architecture adjectives** on the Odoo work: "distributed", "microservices", "RPC-based" — the accurate term for the proxy relay is proxy/relay integration.
+- **Metrics or scale numbers** that do not appear in the profile.
+
+Then cross-check `defensibility.md` if it exists: any headline/summary/domain claim in the CV that is absent from the audit, or that the audit itself rejected yet still appears in the CV, is a CRITICAL gap. A mirrored role label or industry term that IS grounded in the profile is defensible — do not flag it (see Rules).
 
 ### 5. Extract the CV text
 

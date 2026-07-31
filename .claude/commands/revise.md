@@ -154,7 +154,7 @@ snap_dir = f'applications/{app_id}-{slug}/iterations/run-{run_n}-revise/v{iterat
 os.makedirs(snap_dir, exist_ok=True)
 
 src = f'applications/{app_id}-{slug}'
-for fname in ['cv.tex', 'cv.pdf', 'cover_letter.tex']:
+for fname in ['cv.tex', 'cv.pdf', 'cover_letter.tex', 'defensibility.md']:
     try:
         shutil.copy2(f'{src}/{fname}', f'{snap_dir}/{fname}')
     except FileNotFoundError:

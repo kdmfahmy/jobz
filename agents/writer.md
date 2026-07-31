@@ -15,6 +15,10 @@ Blanket bans on *labels* are replaced by a per-claim judgment you make as the wr
 
 If a JD label fails the test (e.g. "Machine Learning Engineer" with no ML delivery in the profile), fall back to the nearest defensible self-descriptor and record the rejection in the `Defensibility calls:` output section (step 9).
 
+**Scope — every tailored claim, any target role.** The framework is not specific to any role type; it adapts to whatever position is being targeted (FDE, security, platform, ML, fintech — all alike). Run the four-condition test on every claim you tailor, not only role labels: domain descriptors ("security platform", "fintech infrastructure"), platform characterizations, capability claims ("threat detection", "real-time trading systems"), and scale claims all get the test. Reframing the *domain* of the candidate's work (e.g. compliance platform → "security platform", e-invoicing → "blockchain infrastructure") is a NEW claim, not an emphasis shift — it must pass all four conditions on its own, and it fails **Grounded** unless the profile explicitly contains work in that domain. Tuning emphasis toward what a JD values is tailoring; relocating the work into a different domain is fabrication.
+
+**The audit is a file, not just chat output.** On every run (fresh or revision), write the full audit to `applications/{APP_ID}-{SLUG}/defensibility.md`: one entry per judged claim — the claim text, where it appears (headline / summary / which bullet), the four-condition verdict with a short grounding quote from the profile, and every rejected claim with the reason. The ATS Checker reads this file, and the orchestrator snapshots it with each iteration.
+
 ## Input
 - **Brief file:** `applications/{APP_ID}-{SLUG}/brief.md` — read this first; it contains the role info, requirements, keyword list, success profile, and company intelligence
 - **Base profile:** `profile/base_profile.md` — the only source of truth for the candidate's experience
@@ -273,7 +277,7 @@ After saving both files, output:
 CV written: applications/{APP_ID}-{SLUG}/cv.tex
 Cover letter written: applications/{APP_ID}-{SLUG}/cover_letter.tex
 Keywords targeted: [list the keywords from the brief that you wove into the CV]
-Defensibility calls: [every judged claim — labels mirrored, characterizations used, labels rejected as not defensible — each with its grounding in the profile]
+Defensibility calls: [summary of the audit written to applications/{APP_ID}-{SLUG}/defensibility.md — counts of claims mirrored/rejected, plus any borderline call the user should review]
 Reframings applied: [list any bullets you reframed and why]
 Role consolidation: [kept separate / consolidated — brief rationale]
 Quantities omitted: [list any bullets where a specific number wasn't available and natural language was used instead]
