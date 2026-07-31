@@ -33,6 +33,30 @@ try {
 
 If `portal/jobz.db` does not exist, the marker is still written to the log and the revision proceeds normally — it just will not appear in the portal. Do not abort.
 
+Compute the run number for this revise session and write the user's feedback to the iterations directory:
+
+```bash
+RUN_N=$(( $(ls -d applications/{APP_ID}-{SLUG}/iterations/run-* 2>/dev/null | wc -l) + 1 ))
+echo "Run number: $RUN_N"
+```
+
+```bash
+python3 -c "
+import os
+app_id = '{APP_ID}'
+slug = '{SLUG}'
+run_n = {RUN_N}
+feedback = {FEEDBACK_JSON}
+run_dir = f'applications/{app_id}-{slug}/iterations/run-{run_n}-revise'
+os.makedirs(run_dir, exist_ok=True)
+with open(f'{run_dir}/feedback.md', 'w') as f:
+    f.write(feedback)
+print(f'Feedback written: {run_dir}/feedback.md')
+" 2>/dev/null || true
+```
+
+Remember `RUN_N` for use in Phase 3 and Phase 4.
+
 ---
 
 ## Phase 1 — Load Brief
@@ -53,7 +77,13 @@ with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
 
 Read the file `agents/writer.md`.
 
-The writer must overwrite the existing `cv.tex` and `cover_letter.tex` files in-place. Do not create backup copies, versioned files, or files with different names. `brief.md` is not touched.
+**Before spawning the Writer, determine the revision scope from the feedback:**
+
+- **Cover letter only** — feedback explicitly refers to the cover letter, its structure, tone, opening, body paragraphs, closing, or cover-letter-specific style rules (e.g. "revise the cover letter", "fix the opening", "the body paragraph is wrong", "add a transition")
+- **CV only** — feedback explicitly refers to the CV, its bullets, sections, formatting, or CV-specific concerns (e.g. "update the CV", "change this bullet", "fix the summary section")
+- **Both** — feedback corrects a factual error, wrong claim, incorrect information, or a specific topic/achievement that may appear in both documents (e.g. "the team size is wrong", "change X to Y everywhere", "the FTA project description is inaccurate")
+
+The writer must only write files in scope — never touch a file outside the scope. `brief.md` is never touched.
 
 Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
@@ -101,7 +131,47 @@ pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf 2>/dev/null | grep "^Pages:" || echo
 
 Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted). The agent has access to Read and Bash tools only.
 
-Wait for the Checker to complete.
+Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
+
+After the Checker returns its report, extract the numeric score and the list of gaps from the GAPS TO FIX section, then snapshot this iteration.
+
+First, write the Checker's full report text to `applications/{APP_ID}-{SLUG}/iterations/run-{RUN_N}-revise/v{ITERATION}/ats_report.md` using the Write tool (substitute the actual iteration number for `{ITERATION}` and the computed run number for `{RUN_N}`).
+
+Then run the following bash, substituting actual values for ITERATION (current iteration number), SCORE (integer extracted from the report), RUN_N (the run number computed in Phase 0), and GAPS_JSON (a JSON array of gap strings from the GAPS TO FIX section):
+
+```bash
+python3 -c "
+import os, json, datetime, shutil
+
+app_id = '{APP_ID}'
+slug = '{SLUG}'
+iteration = {ITERATION}
+score = {SCORE}
+run_n = {RUN_N}
+gaps = {GAPS_JSON}
+
+snap_dir = f'applications/{app_id}-{slug}/iterations/run-{run_n}-revise/v{iteration}'
+os.makedirs(snap_dir, exist_ok=True)
+
+src = f'applications/{app_id}-{slug}'
+for fname in ['cv.tex', 'cv.pdf', 'cover_letter.tex']:
+    try:
+        shutil.copy2(f'{src}/{fname}', f'{snap_dir}/{fname}')
+    except FileNotFoundError:
+        pass
+
+meta = {
+    'score': score,
+    'iteration': iteration,
+    'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
+    'gaps': gaps,
+}
+with open(f'{snap_dir}/meta.json', 'w') as f:
+    json.dump(meta, f, indent=2)
+
+print(f'Snapshot written: {snap_dir}')
+" 2>/dev/null || true
+```
 
 ### Evaluate
 
@@ -152,13 +222,40 @@ with open(f'.pipeline-logs/{APP_ID}.log', 'a') as f:
 " 2>/dev/null || true
 ```
 
-Run:
+Compile only the files that were in scope for this revision (determined in Phase 2):
+
+- **CV in scope** → run tectonic on `cv.tex` and clean up its aux files
+- **Cover letter in scope** → run tectonic on `cover_letter.tex` and clean up its aux files
+- **Both in scope** → compile both
 
 ```bash
+# If CV is in scope:
 tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLUG}/
-tectonic applications/{APP_ID}-{SLUG}/cover_letter.tex --outdir applications/{APP_ID}-{SLUG}/
 rm -f applications/{APP_ID}-{SLUG}/cv.aux applications/{APP_ID}-{SLUG}/cv.log applications/{APP_ID}-{SLUG}/cv.out
+
+# If cover letter is in scope:
+tectonic applications/{APP_ID}-{SLUG}/cover_letter.tex --outdir applications/{APP_ID}-{SLUG}/
 rm -f applications/{APP_ID}-{SLUG}/cover_letter.aux applications/{APP_ID}-{SLUG}/cover_letter.log applications/{APP_ID}-{SLUG}/cover_letter.out
+```
+
+After tectonic succeeds, overwrite the PDFs in the latest snapshot directory with the freshly compiled ones (for whichever files were in scope). The last iteration number is the total number of ATS checks run (including any trim-loop iterations). Run:
+
+```bash
+python3 -c "
+import shutil
+app_id = '{APP_ID}'
+slug = '{SLUG}'
+run_n = {RUN_N}
+last_iter = {LAST_ITERATION}
+snap_dir = f'applications/{app_id}-{slug}/iterations/run-{run_n}-revise/v{last_iter}'
+src_dir = f'applications/{app_id}-{slug}'
+for fname in ['cv.pdf', 'cover_letter.pdf']:
+    try:
+        shutil.copy2(f'{src_dir}/{fname}', f'{snap_dir}/{fname}')
+        print(f'Updated snapshot {fname}')
+    except FileNotFoundError:
+        pass
+" 2>/dev/null || true
 ```
 
 If tectonic is not found, tell the user:
@@ -168,6 +265,15 @@ Then rerun the compilation manually:
   tectonic applications/{APP_ID}-{SLUG}/cv.tex
   tectonic applications/{APP_ID}-{SLUG}/cover_letter.tex
 ```
+
+If pdfinfo is not found (page count comes back as "Pages: unknown"), tell the user:
+```
+pdfinfo is not installed — page count cannot be verified automatically.
+Run: brew install poppler
+       (or on Linux: sudo apt-get install poppler-utils)
+Then rerun.
+```
+Do not proceed with "Pages: unknown" — accurate page count is required for the overflow check.
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry. Do not give up.
 

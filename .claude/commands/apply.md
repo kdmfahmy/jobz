@@ -1,5 +1,8 @@
 # /apply — Job Application Orchestrator
 
+**Use /apply for:** new applications only — when no brief.md exists yet, or when a full re-analysis from the JD is explicitly requested.
+**Use /revise instead when:** the brief already exists and the user wants to regenerate or update the CV/cover letter (profile change, feedback, tweak). If the user says "regenerate", "update", "fix", or "revise" an existing application, that is always /revise.
+
 You are the orchestrator for a 3-agent job application pipeline. Your job is to coordinate the Analyzer, Writer, and ATS Checker agents in sequence, manage the feedback loop, and compile the final output.
 
 **Job input:** $ARGUMENTS
@@ -184,6 +187,45 @@ Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed 
 
 Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
 
+After the Checker returns its report, extract the numeric score and the list of gaps from the GAPS TO FIX section, then snapshot this iteration.
+
+First, write the Checker's full report text to `applications/$APP_ID-$SLUG/iterations/run-apply/v{ITERATION}/ats_report.md` using the Write tool (substitute the actual iteration number for `{ITERATION}`).
+
+Then run the following bash, substituting actual values for ITERATION (current iteration number), SCORE (integer extracted from the report), and GAPS_JSON (a JSON array of gap strings from the GAPS TO FIX section):
+
+```bash
+python3 -c "
+import os, json, datetime, shutil
+
+app_id = '$APP_ID'
+slug = '$SLUG'
+iteration = {ITERATION}
+score = {SCORE}
+gaps = {GAPS_JSON}
+
+snap_dir = f'applications/{app_id}-{slug}/iterations/run-apply/v{iteration}'
+os.makedirs(snap_dir, exist_ok=True)
+
+src = f'applications/{app_id}-{slug}'
+for fname in ['cv.tex', 'cv.pdf', 'cover_letter.tex']:
+    try:
+        shutil.copy2(f'{src}/{fname}', f'{snap_dir}/{fname}')
+    except FileNotFoundError:
+        pass
+
+meta = {
+    'score': score,
+    'iteration': iteration,
+    'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
+    'gaps': gaps,
+}
+with open(f'{snap_dir}/meta.json', 'w') as f:
+    json.dump(meta, f, indent=2)
+
+print(f'Snapshot written: {snap_dir}')
+" 2>/dev/null || true
+```
+
 ### Evaluate
 
 After each Checker run, determine three things independently:
@@ -245,6 +287,24 @@ rm -f applications/$APP_ID-{SLUG}/cv.aux applications/$APP_ID-{SLUG}/cv.log appl
 rm -f applications/$APP_ID-{SLUG}/cover_letter.aux applications/$APP_ID-{SLUG}/cover_letter.log applications/$APP_ID-{SLUG}/cover_letter.out
 ```
 
+After both tectonic commands succeed, overwrite the cv.pdf in the latest snapshot directory with the freshly compiled one. The last iteration number is the total number of ATS checks run (including any trim-loop iterations). Run:
+
+```bash
+python3 -c "
+import shutil
+app_id = '$APP_ID'
+slug = '$SLUG'
+last_iter = {LAST_ITERATION}
+snap_cv = f'applications/{app_id}-{slug}/iterations/run-apply/v{last_iter}/cv.pdf'
+src_cv = f'applications/{app_id}-{slug}/cv.pdf'
+try:
+    shutil.copy2(src_cv, snap_cv)
+    print(f'Updated snapshot cv.pdf: {snap_cv}')
+except FileNotFoundError:
+    pass
+" 2>/dev/null || true
+```
+
 If tectonic is not found, tell the user:
 ```
 tectonic is not installed. Run: brew install tectonic
@@ -252,6 +312,15 @@ Then rerun the compilation manually:
   tectonic applications/$APP_ID-{SLUG}/cv.tex
   tectonic applications/$APP_ID-{SLUG}/cover_letter.tex
 ```
+
+If pdfinfo is not found (page count comes back as "Pages: unknown"), tell the user:
+```
+pdfinfo is not installed — page count cannot be verified automatically.
+Run: brew install poppler
+       (or on Linux: sudo apt-get install poppler-utils)
+Then rerun.
+```
+Do not proceed with "Pages: unknown" — accurate page count is required for the overflow check.
 
 If there are LaTeX errors, read the .tex file, fix the errors, and retry compilation. Do not give up — diagnose and fix.
 
