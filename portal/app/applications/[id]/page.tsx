@@ -1,5 +1,6 @@
 // app/applications/[id]/page.tsx
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import fs from 'fs'
 import path from 'path'
 import { getApplication } from '@/lib/db'
@@ -10,7 +11,7 @@ import { GenerateButton } from '@/components/GenerateButton'
 import { ReviseForm } from '@/components/ReviseForm'
 import { StatusSelect } from '@/components/StatusSelect'
 import { GeneratingStatus } from '@/components/GeneratingStatus'
-import { AtsBreakdown, JobMatchBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords, parseRevisionHistory, readPipelineLog } from '@/lib/pipeline'
+import { AtsBreakdown, JobMatchBreakdown, getStalledState, parseKeywordsFromBrief, parseMissingKeywords, parseMatchedKeywords, parseRevisionHistory, readPipelineLog, readIterationHistory } from '@/lib/pipeline'
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,6 +28,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const matchedKeywords = parseMatchedKeywords(pipelineLog)
   const missingKeywords = parseMissingKeywords(pipelineLog)
   const revisionHistory = parseRevisionHistory(pipelineLog)
+  const iterationHistory = readIterationHistory(app.id, app.slug)
+  const hasIterations = iterationHistory.length > 0
 
   let atsBreakdown: AtsBreakdown | null = null
   let jobMatchBreakdown: JobMatchBreakdown | null = null
@@ -46,6 +49,14 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
             <StatusSelect id={app.id} current={app.status} />
           )}
           {app.status === 'pending' && <GenerateButton id={app.id} />}
+          {hasIterations && (
+            <Link
+              href={`/applications/${id}/iterations`}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Iterations
+            </Link>
+          )}
           {app.ats_score !== null && (
             <a
               href={`/applications/${id}-${app.slug}/cv.pdf`}

@@ -16,27 +16,27 @@ describe('parsePipelineSteps', () => {
   })
 
   test('step 1 done when brief file written', () => {
-    const steps = parsePipelineSteps('Analyzer Agent\nWriting apple_sr-swe_brief.md')
+    const steps = parsePipelineSteps('Analyzer Agent\nWrite: applications/1-apple_sr-swe/brief.md')
     expect(steps[0].status).toBe('done')
     expect(steps[1].status).toBe('in_progress')
   })
 
   test('step 2 done when tex files written', () => {
-    const log = 'Analyzer Agent\nwriting _brief.md\nWriter Agent\nwriting _cv.tex\nwriting _cover_letter.tex'
+    const log = 'Analyzer Agent\napplications/1-apple/brief.md\nWriter Agent\nATS Checker'
     const steps = parsePipelineSteps(log)
     expect(steps[1].status).toBe('done')
     expect(steps[2].status).toBe('in_progress')
   })
 
   test('step 3 shows iteration detail', () => {
-    const log = 'Analyzer Agent\n_brief.md\nWriter Agent\n_cv.tex\n_cover_letter.tex\nATS Check: Iteration 2'
+    const log = 'Analyzer Agent\napplications/1-apple/brief.md\nWriter Agent\nATS Checker\niteration 2'
     const steps = parsePipelineSteps(log)
     expect(steps[2].status).toBe('in_progress')
     expect(steps[2].detail).toBe('iteration 2 of 3')
   })
 
   test('all done when APPLICATION: appears', () => {
-    const log = 'Analyzer Agent\n_brief.md\nWriter Agent\n_cv.tex\n_cover_letter.tex\nATS Check\ntectonic\nAPPLICATION: Senior SWE'
+    const log = 'Analyzer Agent\napplications/1-apple/brief.md\nWriter Agent\nATS Checker\ntectonic applications/1-apple/cv.tex\nAPPLICATION: Senior SWE'
     const steps = parsePipelineSteps(log)
     expect(steps.every(s => s.status === 'done')).toBe(true)
   })

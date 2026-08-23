@@ -165,9 +165,9 @@ export function parseAtsResult(log: string): AtsResult | null {
     actionVerbs:  n(/Action Verbs:\s*(\d+)\/8/),
   }
 
-  const historyMatch = log.match(/Score history:\s*([0-9→ ]+)/)
+  const historyMatch = log.match(/Score history:\s*([0-9→ \[\]]+)/)
   const iterations = historyMatch
-    ? historyMatch[1].split(/\s*→\s*/).map(Number).filter(n => !isNaN(n))
+    ? historyMatch[1].replace(/[\[\]]/g, '').split(/\s*→\s*/).map(Number).filter(n => !isNaN(n))
     : [score]
 
   return { score, breakdown, iterations }
@@ -325,6 +325,98 @@ function spawnClaude(applicationId: number, prompt: string): void {
   })
 
   child.unref()
+}
+
+export interface IterationSnapshot {
+  version: number
+  score: number | null
+  gaps: string[]
+  timestamp: string | null
+  hasPdf: boolean
+  hasCvTex: boolean
+  hasCoverLetterTex: boolean
+}
+
+export interface PipelineRun {
+  runNumber: number
+  type: 'apply' | 'revise'
+  feedback: string | null
+  iterations: IterationSnapshot[]
+}
+
+export function readIterationHistory(appId: number, slug: string): PipelineRun[] {
+  const iterationsDir = path.join(projectRoot(), 'applications', `${appId}-${slug}`, 'iterations')
+  if (!fs.existsSync(iterationsDir)) return []
+
+  let runDirs: string[]
+  try {
+    runDirs = fs.readdirSync(iterationsDir)
+  } catch {
+    return []
+  }
+
+  const runs: PipelineRun[] = []
+  for (const dirName of runDirs) {
+    const m = dirName.match(/^run-(\d+)-(apply|revise)$/)
+    if (!m) continue
+    const runNumber = parseInt(m[1])
+    const type = m[2] as 'apply' | 'revise'
+    const runDir = path.join(iterationsDir, dirName)
+
+    let versionDirs: string[]
+    try {
+      versionDirs = fs.readdirSync(runDir)
+    } catch {
+      versionDirs = []
+    }
+
+    const snapshots: IterationSnapshot[] = []
+    for (const vDirName of versionDirs) {
+      const vm = vDirName.match(/^v(\d+)$/)
+      if (!vm) continue
+      const version = parseInt(vm[1])
+      const vDir = path.join(runDir, vDirName)
+
+      let score: number | null = null
+      let gaps: string[] = []
+      let timestamp: string | null = null
+
+      const metaPath = path.join(vDir, 'meta.json')
+      if (fs.existsSync(metaPath)) {
+        try {
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+          score = typeof meta.score === 'number' ? meta.score : null
+          gaps = Array.isArray(meta.gaps) ? meta.gaps : []
+          timestamp = typeof meta.timestamp === 'string' ? meta.timestamp : null
+        } catch {
+          // ignore parse errors
+        }
+      }
+
+      const hasPdf = fs.existsSync(path.join(vDir, 'cv.pdf'))
+      const hasCvTex = fs.existsSync(path.join(vDir, 'cv.tex'))
+      const hasCoverLetterTex = fs.existsSync(path.join(vDir, 'cover_letter.tex'))
+
+      snapshots.push({ version, score, gaps, timestamp, hasPdf, hasCvTex, hasCoverLetterTex })
+    }
+
+    snapshots.sort((a, b) => a.version - b.version)
+
+    let feedback: string | null = null
+    if (type === 'revise') {
+      const feedbackPath = path.join(runDir, 'feedback.md')
+      try {
+        feedback = fs.readFileSync(feedbackPath, 'utf-8')
+      } catch {
+        feedback = null
+      }
+    }
+
+    runs.push({ runNumber, type, feedback, iterations: snapshots })
+  }
+
+  runs.sort((a, b) => a.runNumber - b.runNumber)
+  return runs
 }
 
 export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
