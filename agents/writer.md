@@ -17,7 +17,7 @@ If a JD label fails the test (e.g. "Machine Learning Engineer" with no ML delive
 
 **Scope — every tailored claim, any target role.** The framework is not specific to any role type; it adapts to whatever position is being targeted (FDE, security, platform, ML, fintech — all alike). Run the four-condition test on every claim you tailor, not only role labels: domain descriptors ("security platform", "fintech infrastructure"), platform characterizations, capability claims ("threat detection", "real-time trading systems"), and scale claims all get the test. Reframing the *domain* of the candidate's work (e.g. compliance platform → "security platform", e-invoicing → "blockchain infrastructure") is a NEW claim, not an emphasis shift — it must pass all four conditions on its own, and it fails **Grounded** unless the profile explicitly contains work in that domain. Tuning emphasis toward what a JD values is tailoring; relocating the work into a different domain is fabrication.
 
-**The audit is a file, not just chat output.** On every run (fresh or revision), write the full audit to `applications/{APP_ID}-{SLUG}/defensibility.md`: one entry per judged claim — the claim text, where it appears (headline / summary / which bullet), the four-condition verdict with a short grounding quote from the profile, and every rejected claim with the reason. The ATS Checker reads this file, and the orchestrator snapshots it with each iteration.
+**The audit is a file, not just chat output.** On every run (fresh or revision), write the full audit to `applications/{APP_ID}-{SLUG}/defensibility.md`: one entry per judged claim — the claim text, where it appears (summary / which bullet), the four-condition verdict with a short grounding quote from the profile, and every rejected claim with the reason. The ATS Checker reads this file, and the orchestrator snapshots it with each iteration.
 
 ## Input
 - **Brief file:** `applications/{APP_ID}-{SLUG}/brief.md` — read this first; it contains the role info, requirements, keyword list, success profile, and company intelligence
@@ -161,7 +161,7 @@ Frame the candidate as a technical leader who stays close to the code. Emphasize
 | Software Engineering Team Lead | Software Engineer, Tech Lead |
 | Software Engineer | Client Solution Developer |
 
-"Client Solution Developer" is an official alternate title for the first role — it is accurate, not a reframe. Frame the candidate as an engineer who ships production systems AND sits across the table from clients: lead with client-facing evidence (C-suite counterparts, escalation handling, on-site go-lives with post-go-live on-call, requirements→technical translation — see the profile's "Client-Facing & Consulting Experience" section, including its anecdote). NEVER title any Work Experience role "Forward Deployed Engineer" — employment verification will contradict it. The headline and professional summary, however, MAY identify him as a forward-deployed engineer when the target is FDE-style and the claim passes the Defensibility Framework, grounded in the profile's "Client-Facing & Consulting Experience" section (embedded delivery, C-suite escalations, on-site go-lives, post-go-live on-call).
+"Client Solution Developer" is an official alternate title for the first role — it is accurate, not a reframe. Frame the candidate as an engineer who ships production systems AND sits across the table from clients: lead with client-facing evidence (C-suite counterparts, escalation handling, on-site go-lives with post-go-live on-call, requirements→technical translation — see the profile's "Client-Facing & Consulting Experience" section, including its anecdote). NEVER title any Work Experience role "Forward Deployed Engineer" — employment verification will contradict it. The professional summary, however, MAY identify him as a forward-deployed engineer when the target is FDE-style and the claim passes the Defensibility Framework, grounded in the profile's "Client-Facing & Consulting Experience" section (embedded delivery, C-suite escalations, on-site go-lives, post-go-live on-call).
 
 Each Odoo role has a distinct title; writing the same title for two consecutive roles is an error.
 
@@ -181,7 +181,7 @@ Never touch a file that is not in scope for this revision.
 
 Follow `templates/cv_style.md` exactly for formatting, structure, and the LaTeX preamble.
 
-**Headline:** immediately under the name, write a one-line professional headline mirroring the JD's role identity when defensible (see `templates/cv_style.md` for the LaTeX pattern) — e.g. "Forward-Deployed Software Engineer — Enterprise Client Delivery" or "Senior Backend Engineer — Payments & Compliance". The headline is a self-descriptor, not an employment title; it must pass the Defensibility Framework. Every CV gets a headline.
+**No headline:** do NOT add a headline/subtitle line under the name — the contact line follows the name directly (see `templates/cv_style.md`). Mirror the JD's role identity in the Professional Summary instead, where it must pass the Defensibility Framework.
 
 **Golden Visa placement:** if the role's location in the brief is in the UAE or GCC, append "UAE Golden Visa" to the header contact line after "Dubai, UAE" (see `templates/cv_style.md` for the exact pattern); otherwise leave the contact line clean. If the brief lacks a location, leave it clean. The education-line mention stays in every CV either way.
 
@@ -265,6 +265,7 @@ Follow `templates/cover_letter_style.md` exactly — including the "How to Write
 - Draw on Company Intelligence from the brief — mirror the spirit and 1–2 resonant terms, not a string of their buzzwords
 - No clichés, no hedging verbs ("I feel", "I believe", "I think") — follow the style guide strictly
 - Read it aloud (mentally) — if it sounds like a job posting, a ChatGPT summary, or a generic professional letter, rewrite it
+- **Punctuation tell (candidate feedback, 2026-08-04): no colons, semicolons, em dashes, or en dashes in the cover letter body.** These read as AI-generated. Use commas or split into separate sentences. Hyphens inside compound words (e-invoicing, multi-currency) are fine — the ban is on punctuation used to join or introduce clauses.
 - **Preserve the candidate's voice.** Write in the same register calibrated from the base profile bullets above. A polished letter that sounds like "a cover letter" is a failure; it must sound like *this person* wrote it. If a sentence would fit in any applicant's letter, it's wrong.
 - Count your words before saving — if the body exceeds 290 words, cut
 

@@ -36,18 +36,17 @@ Use the following preamble exactly:
 
 After `\begin{document}`, add `\raggedright` to use left-aligned text throughout — avoids the uneven word spacing that full justification produces.
 
-## Header — Name, Headline, Contact Line (use exactly this)
+## Header — Name, Contact Line (use exactly this)
 
 ```latex
-{\fontsize{14}{16}\selectfont\textbf{Khaled Afifi}}\\[2pt]
-{\fontsize{10.5}{12}\selectfont\textit{Forward-Deployed Software Engineer --- Enterprise Client Delivery}}\\[3pt]
+{\fontsize{14}{16}\selectfont\textbf{Khaled Afifi}}\\[3pt]
 \faEnvelope\ \href{mailto:kdmfahmy@gmail.com}{kdmfahmy@gmail.com} \quad
 \faPhone\ +971 566 292 118 \quad
 \faLinkedinSquare\ \href{https://linkedin.com/in/khaled-afifi-9469221aa}{linkedin.com/in/khaled-afifi-9469221aa} \quad
 \faMapMarker\ Dubai, UAE
 ```
 
-**Headline line (required on every CV):** the second line is a one-line professional headline chosen by the Writer to mirror the JD's role identity when defensible (per the Defensibility Framework in `agents/writer.md`). The text above is an example — replace it per application. It is part of the header and is never trimmed for page fit.
+**No headline line:** do NOT add a professional headline/subtitle line under the name. The contact line follows the name directly. Role-identity framing belongs in the Professional Summary only.
 
 **Golden Visa (conditional):** for UAE/GCC-located roles ONLY, the contact line's location segment becomes:
 
@@ -77,10 +76,10 @@ Never reduce font size below 10pt. Never reduce margins beyond the values above.
 - Clean, minimal, ATS-friendly (no tables, no columns, no fancy graphics)
 - Accent color: `#111111` (near-black) for section headers and rule lines — no blue anywhere
 - Links: `\hypersetup{hidelinks}` — no underline, no color
-- Font size: 10pt body, 14pt name header, 10.5pt headline line, 11pt section titles
+- Font size: 10pt body, 14pt name header, 11pt section titles
 
 ## Structure Order
-1. Header (Name, headline line, contact line with icons)
+1. Header (Name, contact line with icons)
 2. Professional Summary (2 lines max — tight)
 3. Work Experience (reverse chronological, last 2–3 roles only)
 4. Skills (one line per category, 3 categories max)
@@ -113,11 +112,12 @@ Education must fit on two lines at most — degree name and year on line 1, inst
 \noindent\textbf{Degree Name} \hfill \textit{Mon YYYY -- Mon YYYY}\\
 Institution Name --- GPA: X.XX / 4.0 \quad UAE Golden Visa recipient for academic achievement
 ```
-Use the full date range (e.g. `Sep 2017 -- Dec 2021`), not just the graduation year — consistent with the job entry date format.
+Use the full date range (e.g. `Sep 2017 -- Jan 2022`), not just the graduation year — consistent with the job entry date format.
 Include GPA inline on the institution line, left-aligned (no `\hfill`).
 **Always append `\quad UAE Golden Visa recipient for academic achievement` after the GPA** — this credential must appear on every CV, on the education line. Never omit it and never shorten it.
 Never use `\hfill` after a long degree name — it will wrap and the date will appear alone on a new line.
-If the degree name is long, shorten it (e.g. "Dual B.Sc., Computer Engineering & Electrical Engineering").
+If the degree name is long, shorten it. Canonical rendering: `B.Sc., Double Major in Computer \& Electrical Engineering` (Sep 2017 -- Jan 2022).
+**Never** write "Dual B.Sc." or "dual degree(s)" — the official transcript awards ONE Bachelor of Science with a double major (primary degree recorded as BS in Electrical Engineering), so "dual degree" contradicts a transcript check. Computer Engineering is listed first by preference.
 
 ### Skills
 Use plain text entries with bold label — no `\noindent` needed when `\parindent` is 0:
@@ -148,7 +148,7 @@ Before saving the .tex file, verify every item below. Do not skip any check.
 **Overall:**
 - [ ] All role entries use identical LaTeX structure (same line pattern, same `\hfill` usage)
 - [ ] No section has different spacing treatment than others
-- [ ] Headline line is present directly under the name, italic, 10.5pt
+- [ ] No headline/subtitle line under the name — contact line follows the name directly
 - [ ] Golden Visa appears on the contact line ONLY for UAE/GCC-located roles; education-line mention present in all cases
 
 ## Content Volume Limits (enforce strictly)

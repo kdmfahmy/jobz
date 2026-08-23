@@ -45,7 +45,7 @@ Include any cover letter issues as CRITICAL gaps — they block submission the s
 
 ### 4. Submission readiness check
 
-Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score. (Exception: the Headline check below is HIGH, not CRITICAL.)
+Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score.
 
 **Content artifacts:**
 - **Bracket artifacts:** any `[`, `]` appearing as placeholders or unfilled instructions (e.g. `[ESTIMATE`, `[FILL IN`, `[Team Name`, `[Company`, `[TODO`)
@@ -67,15 +67,15 @@ Before scoring, check the CV for anything that would make it unfit for submissio
 - The Education entry uses `\hfill` after a long degree name that would cause the year to wrap to the next line alone — Education must fit cleanly on two lines max
 - Any role entry deviates from the standard two-line pattern: `\noindent\textbf{Role} \hfill \textit{Start -- End}\\` then `\textit{Company} \hfill \textit{City, Country}`
 
-**Headline check (HIGH, not CRITICAL):** the header must contain a one-line professional headline directly under the name (italic line before the contact line). If absent, add a gap: `[HIGH | EASY] Missing professional headline under the name — add a one-line self-descriptor mirroring the JD role identity (see templates/cv_style.md)`. This does not block PASS on its own.
+**No-headline check (HIGH, not CRITICAL):** the header must NOT contain a headline/subtitle line under the name — the contact line follows the name directly. If a headline line is present, add a gap: `[HIGH | EASY] Remove the headline/subtitle line under the name (see templates/cv_style.md)`. This does not block PASS on its own.
 
-**Defensibility verification (CRITICAL):** read `profile/base_profile.md` and verify every substantive claim in the headline, summary, and experience bullets is grounded in it. Fabrication blocks submission regardless of score — flag each of these as CRITICAL:
+**Defensibility verification (CRITICAL):** read `profile/base_profile.md` and verify every substantive claim in the summary and experience bullets is grounded in it. Fabrication blocks submission regardless of score — flag each of these as CRITICAL:
 - **Domain or platform characterizations with no profile basis** — e.g. calling a compliance/e-invoicing platform a "security platform", claiming "threat detection", "blockchain infrastructure", or any domain the profile does not explicitly contain. Emphasis shifts within the candidate's real domain are fine; relocating the work into a different domain is not.
 - **Technologies in work-experience bullets** that the profile marks personal/knowledge/exposure or does not attach to that job.
 - **Banned architecture adjectives** on the Odoo work: "distributed", "microservices", "RPC-based" — the accurate term for the proxy relay is proxy/relay integration.
 - **Metrics or scale numbers** that do not appear in the profile.
 
-Then cross-check `defensibility.md` if it exists: any headline/summary/domain claim in the CV that is absent from the audit, or that the audit itself rejected yet still appears in the CV, is a CRITICAL gap. A mirrored role label or industry term that IS grounded in the profile is defensible — do not flag it (see Rules).
+Then cross-check `defensibility.md` if it exists: any summary/domain claim in the CV that is absent from the audit, or that the audit itself rejected yet still appears in the CV, is a CRITICAL gap. A mirrored role label or industry term that IS grounded in the profile is defensible — do not flag it (see Rules).
 
 ### 5. Extract the CV text
 
@@ -200,5 +200,5 @@ OR
 - Do not hallucinate keywords into the CV that aren't there
 - The GAPS TO FIX section must be specific enough for the Writer Agent to act on without ambiguity
 - **Page overflow is always a gap — even if the ATS score is ≥ 80, flag it and include it in GAPS TO FIX**
-- **Truthfulness constraint: every suggestion must be achievable from the candidate's actual experience in `profile/base_profile.md`. Do not suggest adding skills, roles, or achievements that are not evidenced there. If a required keyword has no basis in the profile, flag it as an unresolvable gap — do not instruct the Writer to invent it. A mirrored JD role label in the headline or professional summary that is grounded in the profile (e.g. a forward-deployed-engineer self-descriptor backed by the client-embedded delivery experience) is a defensible claim under the Writer's Defensibility Framework, not a fabrication — do not flag it. Work Experience section titles are still held to the approved title stacks.**
+- **Truthfulness constraint: every suggestion must be achievable from the candidate's actual experience in `profile/base_profile.md`. Do not suggest adding skills, roles, or achievements that are not evidenced there. If a required keyword has no basis in the profile, flag it as an unresolvable gap — do not instruct the Writer to invent it. A mirrored JD role label in the professional summary that is grounded in the profile (e.g. a forward-deployed-engineer self-descriptor backed by the client-embedded delivery experience) is a defensible claim under the Writer's Defensibility Framework, not a fabrication — do not flag it. Work Experience section titles are still held to the approved title stacks.**
 - Output the full report as your response — it will be read by the orchestrator

@@ -40,7 +40,7 @@ Free-text application answers ("Why us?", "Tell us about your experience with X"
 
 What to do instead:
 
-- **Anchor in a specific true moment.** "What surprised me was where the hours went: very little was prompts, most was health checks and restart logic" beats any crafted argument. The moment must come from the user's real work (profile, this repo, things they've told you) — never invent an anecdote.
-- **No em dashes or en dashes** in answer text. Use commas, colons (at most one per answer), or split the sentence.
+- **Anchor in a specific true moment.** "What surprised me was where the hours went. Very little was prompts, most was health checks and restart logic" beats any crafted argument. The moment must come from the user's real work (profile, this repo, things they've told you) — never invent an anecdote.
+- **No colons, semicolons, em dashes, or en dashes** in answer text — these punctuation marks read as AI tells (candidate feedback, 2026-08-04). Use commas or split the sentence. Hyphens inside compound words (e-invoicing, multi-agent) are fine; the ban is on punctuation joining or introducing clauses.
 - **Default to brief.** ~100–200 words unless the form asks for more. Offer a trim rather than padding.
 - **Label personal work as personal.** Side projects must be introduced as such ("as a personal project", "outside of work") so they can't be read as professional experience.

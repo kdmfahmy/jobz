@@ -17,6 +17,9 @@ Scoring:
 
 **ATS tip:** Include keywords in context (inside bullet points), not just in a skills list. ATS systems weight in-context usage higher.
 
+**Domain/field alignment sub-check (included within keyword score, not separate points):**
+Identify the company's industry domain from the job description and company context (e.g., HR tech, fintech, e-commerce, logistics, ERP, compliance). Then check whether the CV surfaces experience from the candidate's background that is relevant to that domain — even if the candidate worked in a different product (e.g., ERP that includes HR, accounting, payroll modules). If the company is in HR tech but the CV has no mention of HR-related work (payroll, leave management, employee data, HR workflows) despite the candidate having that experience, flag it as a gap. Domain alignment is a keyword-match concern: the relevant domain terminology from the candidate's actual experience must appear in the CV when the company operates in that space.
+
 ---
 
 ## 2. Quantified Achievements — 25 points
