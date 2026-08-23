@@ -26,7 +26,7 @@ test('createApplication inserts and returns a row', () => {
   })
   expect(app.id).toBeDefined()
   expect(app.slug).toBe('apple_sr-swe')
-  expect(app.status).toBe('generating')
+  expect(app.status).toBe('pending')
   expect(app.ats_score).toBeNull()
 })
 

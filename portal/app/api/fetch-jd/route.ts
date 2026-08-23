@@ -53,7 +53,7 @@ function companyFromUrl(url: string): string {
 
 // Many JS-heavy job boards embed schema.org/JobPosting in <script type="application/ld+json"> for SEO crawlers.
 // This is statically served and doesn't require JS execution.
-function extractJsonLdJob(html: string): { role: string; company: string; jd_text: string } | null {
+function extractJsonLdJob(html: string): { role: string; company: string; job_id: string; jd_text: string } | null {
   const scriptBlocks = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)
   for (const block of scriptBlocks) {
     try {
@@ -68,9 +68,13 @@ function extractJsonLdJob(html: string): { role: string; company: string; jd_tex
           ? String((n['hiringOrganization'] as Record<string, unknown>)['name'] ?? '')
           : typeof n['hiringOrganization'] === 'string' ? n['hiringOrganization'] : ''
         const company = decodeEntities(orgName)
+        const job_id = typeof n['identifier'] === 'string' ? n['identifier']
+          : typeof n['identifier'] === 'object' && n['identifier'] !== null
+            ? String((n['identifier'] as Record<string, unknown>)['value'] ?? '')
+            : ''
         const rawDesc = typeof n['description'] === 'string' ? n['description'] : ''
         const jd_text = rawDesc ? htmlToText(rawDesc) : ''
-        if (role || jd_text) return { role, company, jd_text }
+        if (role || jd_text) return { role, company, job_id, jd_text }
       }
     } catch {
       // malformed JSON-LD, skip
@@ -115,7 +119,26 @@ function htmlToText(html: string): string {
   return htmlToTextRaw(html).slice(0, 12000)
 }
 
-type JdExtraction = { role: string; company: string; jd_text: string }
+function jobIdFromUrl(url: string): string {
+  // Greenhouse
+  const gh = url.match(/greenhouse\.io\/[^/]+\/jobs\/(\d+)/)
+  if (gh) return gh[1]
+  // Lever
+  const lever = url.match(/lever\.co\/[^/]+\/([0-9a-f-]{36})/)
+  if (lever) return lever[1]
+  // LinkedIn
+  const li = url.match(/linkedin\.com\/jobs\/view\/(\d+)/)
+  if (li) return li[1]
+  // Workday
+  const wd = url.match(/[?&](?:jobId|Job_ID|requisitionId)=([^&]+)/)
+  if (wd) return wd[1]
+  // Generic numeric/alphanumeric ID at end of path
+  const generic = url.match(/\/(\d{6,})(?:[/?#]|$)/)
+  if (generic) return generic[1]
+  return ''
+}
+
+type JdExtraction = { role: string; company: string; job_id?: string; jd_text: string }
 
 async function cleanWithClaude(pageText: string, url: string): Promise<JdExtraction | null> {
   const prompt = `You are extracting clean job posting content from a fetched web page.
@@ -180,6 +203,80 @@ ${pageText.slice(0, 40000)}
         })
       } catch (err) {
         console.error('[fetch-jd] could not parse claude output:', err, 'raw:', stdout.slice(0, 500))
+        resolve(null)
+      }
+    })
+  })
+}
+
+// For JS-heavy SPAs where Node fetch returns an empty shell, ask Claude to fetch
+// the URL directly using its WebFetch tool, which renders JavaScript.
+async function fetchWithClaude(url: string): Promise<JdExtraction | null> {
+  const prompt = `Fetch this job posting URL and extract the content.
+
+URL: ${url}
+
+Use the WebFetch tool to fetch the page. Then return ONLY a JSON object with this exact shape, on a single line, with no markdown fences and no commentary before or after:
+{"role":"<job title>","company":"<company name>","jd_text":"<clean job description>"}
+
+Rules for jd_text:
+- Include only the job description prose: role overview, responsibilities, requirements, qualifications, preferred qualifications, benefits, "about the team", "why join us", "diversity & inclusion" sections.
+- Do NOT include the role title as a standalone heading at the very top.
+- Strip site navigation, footers, cookie banners, apply buttons, and other site chrome.
+- Preserve the original wording. Do not paraphrase or summarize.
+
+Other rules:
+- company is the hiring company (e.g. "TikTok", "ByteDance") — not the job board.
+- If the page is not a job posting, cannot be fetched, returns an error, requires login, or is geoblocked, return exactly: {"role":"","company":"","jd_text":""}
+- CRITICAL: Your entire response must be that single JSON object and nothing else — no explanations, no apologies, no error descriptions. Even on failure, output only the JSON.`
+
+  return new Promise((resolve) => {
+    const proc = spawn(
+      'claude',
+      [
+        '-p', prompt,
+        '--model', 'claude-sonnet-4-6',
+        '--output-format', 'json',
+        '--dangerously-skip-permissions',
+      ],
+      { cwd: '/tmp', env: process.env, timeout: 90000 }
+    )
+
+    let stdout = ''
+    let stderr = ''
+    proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString() })
+    proc.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
+
+    proc.on('error', (err) => {
+      console.error('[fetch-jd] fetchWithClaude spawn error:', err)
+      resolve(null)
+    })
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        console.error('[fetch-jd] fetchWithClaude exit', code, 'stderr:', stderr.slice(0, 500))
+        return resolve(null)
+      }
+      try {
+        const envelope = JSON.parse(stdout)
+        const result = typeof envelope?.result === 'string' ? envelope.result : ''
+        const stripped = result.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
+        let parsed: Record<string, unknown>
+        try {
+          parsed = JSON.parse(stripped)
+        } catch {
+          // Claude returned prose instead of JSON — try to find an embedded object
+          const m = stripped.match(/\{[\s\S]*"jd_text"[\s\S]*\}/)
+          if (!m) { console.error('[fetch-jd] fetchWithClaude no JSON in output, raw:', result.slice(0, 200)); return resolve(null) }
+          parsed = JSON.parse(m[0])
+        }
+        resolve({
+          role: typeof parsed.role === 'string' ? parsed.role : '',
+          company: typeof parsed.company === 'string' ? parsed.company : '',
+          jd_text: typeof parsed.jd_text === 'string' ? parsed.jd_text : '',
+        })
+      } catch (err) {
+        console.error('[fetch-jd] fetchWithClaude could not parse output:', err, 'raw:', stdout.slice(0, 500))
         resolve(null)
       }
     })
@@ -279,7 +376,7 @@ export async function GET(req: NextRequest) {
   if (ghBoardMatch) {
     try {
       const result = await fetchGreenhouse(ghBoardMatch[1], ghBoardMatch[2])
-      return NextResponse.json(result)
+      return NextResponse.json({ ...result, job_id: ghBoardMatch[2] })
     } catch (err) {
       return NextResponse.json(
         { error: `Could not fetch Greenhouse job: ${err instanceof Error ? err.message : err}` },
@@ -293,7 +390,7 @@ export async function GET(req: NextRequest) {
   if (linkedInMatch) {
     try {
       const result = await fetchLinkedIn(linkedInMatch[1])
-      return NextResponse.json(result)
+      return NextResponse.json({ ...result, job_id: linkedInMatch[1] })
     } catch (err) {
       return NextResponse.json(
         { error: `Could not fetch LinkedIn job: ${err instanceof Error ? err.message : err}` },
@@ -302,8 +399,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Generic fetch
-  let html: string
+  // Generic fetch — null if network/DNS failure
+  let html: string | null = null
   try {
     const res = await fetch(url, {
       headers: {
@@ -316,42 +413,45 @@ export async function GET(req: NextRequest) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     html = await res.text()
   } catch (err) {
-    return NextResponse.json({ error: `Could not fetch URL: ${err instanceof Error ? err.message : err}` }, { status: 422 })
+    console.error('[fetch-jd] fetch failed for', url, err instanceof Error ? err.message : err)
   }
 
-  // Try JSON-LD first — it survives JS-rendered pages because it's embedded for SEO crawlers
-  const jsonLd = extractJsonLdJob(html)
-  if (jsonLd) {
-    const company = jsonLd.company || companyFromUrl(url)
-    return NextResponse.json({ role: jsonLd.role, company, jd_text: jsonLd.jd_text })
+  const urlJobId = jobIdFromUrl(url)
+
+  if (html) {
+    const jsonLd = extractJsonLdJob(html)
+    if (jsonLd) {
+      const company = jsonLd.company || companyFromUrl(url)
+      const job_id = jsonLd.job_id || urlJobId
+      return NextResponse.json({ role: jsonLd.role, company, job_id, jd_text: jsonLd.jd_text })
+    }
+
+    const cleaned = await cleanWithClaude(htmlToTextRaw(html), url)
+    if (cleaned && (cleaned.role || cleaned.jd_text)) {
+      const company = cleaned.company || companyFromUrl(url)
+      return NextResponse.json({ role: cleaned.role, company, job_id: cleaned.job_id || urlJobId, jd_text: cleaned.jd_text })
+    }
   }
 
-  // Generic case: use Claude to extract clean role/company/jd_text from the page text.
-  // This handles JS-heavy SPAs (TikTok, etc.) that have no JSON-LD and no recognized
-  // JD container, where regex fallback dumps page chrome into jd_text.
-  const pageText = htmlToTextRaw(html)
-  const cleaned = await cleanWithClaude(pageText, url)
-  if (cleaned && (cleaned.role || cleaned.jd_text)) {
-    const company = cleaned.company || companyFromUrl(url)
-    return NextResponse.json({ role: cleaned.role, company, jd_text: cleaned.jd_text })
+  // Node fetch failed or Claude found nothing — try Claude's WebFetch (renders JS, own DNS)
+  const claudeFetched = await fetchWithClaude(url)
+  if (claudeFetched && (claudeFetched.role || claudeFetched.jd_text)) {
+    const company = claudeFetched.company || companyFromUrl(url)
+    return NextResponse.json({ role: claudeFetched.role, company, job_id: claudeFetched.job_id || urlJobId, jd_text: claudeFetched.jd_text })
   }
 
-  // Last-resort fallback if Claude failed: parse HTML meta/title tags + best-effort body
+  // Last-resort: parse meta/title tags from whatever HTML we have
+  if (!html) return NextResponse.json({ error: 'Could not fetch URL' }, { status: 422 })
+
   const ogTitle = extractMeta(html, 'og:title')
   const pageTitle = extractTag(html, 'title')
   const h1 = extractTag(html, 'h1')
-
   const titleSource = decodeEntities(ogTitle || pageTitle || '')
   let { role, company } = parseRoleAndCompany(titleSource)
-
   if (h1 && h1.length < 120) role = decodeEntities(h1)
   if (!company) company = companyFromUrl(url)
-
   if (company && role.toLowerCase().endsWith(company.toLowerCase())) {
     role = role.slice(0, role.length - company.length).replace(/[-|–\s]+$/, '').trim()
   }
-
-  const jd_text = extractDescriptionSection(html) || htmlToText(html)
-
-  return NextResponse.json({ role, company, jd_text })
+  return NextResponse.json({ role, company, job_id: urlJobId, jd_text: extractDescriptionSection(html) || htmlToText(html) })
 }

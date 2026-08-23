@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 export default function NewApplicationPage() {
   const router = useRouter()
   const [jdUrl, setJdUrl] = useState('')
+  const [jobId, setJobId] = useState('')
   const [jdText, setJdText] = useState('')
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
@@ -39,6 +40,7 @@ export default function NewApplicationPage() {
       if (!res.ok) throw new Error(data.error ?? 'Failed to fetch')
       if (data.role && !role) setRole(data.role)
       if (data.company && !company) setCompany(data.company)
+      if (data.job_id && !jobId) setJobId(data.job_id)
       if (data.jd_text && !jdText) setJdText(data.jd_text)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Could not fetch URL')
@@ -72,7 +74,7 @@ export default function NewApplicationPage() {
       const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined, web_research: webResearch }),
+        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined, job_id: jobId || undefined, web_research: webResearch }),
       })
       if (!res.ok) {
         let errMsg = 'Failed to create application'
@@ -103,25 +105,21 @@ export default function NewApplicationPage() {
           <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
             Job URL <span className="text-slate-600 font-normal normal-case">(optional)</span>
           </label>
-          <div className="relative">
-            <input
-              type="url"
-              value={jdUrl}
-              onChange={e => setJdUrl(e.target.value)}
-              onBlur={handleUrlBlur}
-              placeholder="https://jobs.apple.com/en-us/details/..."
-              className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-            />
-            {fetching && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 animate-pulse">
-                Fetching…
-              </span>
-            )}
-          </div>
-          {fetchError && (
+          <input
+            type="url"
+            value={jdUrl}
+            onChange={e => setJdUrl(e.target.value)}
+            onBlur={handleUrlBlur}
+            placeholder="https://jobs.apple.com/en-us/details/..."
+            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+          />
+          {fetching && (
+            <p className="text-xs text-slate-500 mt-1 animate-pulse">Fetching…</p>
+          )}
+          {!fetching && fetchError && (
             <p className="text-xs text-amber-500 mt-1">{fetchError} — fill in company and role manually.</p>
           )}
-          {!fetchError && (
+          {!fetching && !fetchError && (
             <p className="text-xs text-slate-600 mt-1">Company, role, and JD will be auto-filled when you leave this field.</p>
           )}
         </div>
@@ -142,6 +140,19 @@ export default function NewApplicationPage() {
             value={role}
             onChange={e => setRole(e.target.value)}
             placeholder="Senior Software Engineer"
+            className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {/* Job ID */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+            Job ID <span className="text-slate-600 font-normal normal-case">(auto-filled)</span>
+          </label>
+          <input
+            value={jobId}
+            onChange={e => setJobId(e.target.value)}
+            placeholder="e.g. 7461884697410799112"
             className="w-full bg-[#141414] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
           />
         </div>

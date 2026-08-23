@@ -8,7 +8,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { company: string; role: string; jd_text: string; jd_url?: string; web_research?: boolean }
+  let body: { company: string; role: string; jd_text: string; jd_url?: string; job_id?: string; web_research?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       company: body.company,
       role: body.role,
       jd_url: body.jd_url,
+      job_id: body.job_id,
       jd_text: body.jd_text,
     })
     return NextResponse.json(app, { status: 201 })

@@ -39,6 +39,7 @@ function initSchema(db: Database.Database) {
     );
   `)
   try { db.exec('ALTER TABLE applications ADD COLUMN pid INTEGER') } catch {}
+  try { db.exec('ALTER TABLE applications ADD COLUMN job_id TEXT') } catch {}
 }
 
 export type ApplicationStatus =
@@ -51,6 +52,7 @@ export interface Application {
   company: string
   role: string
   jd_url: string | null
+  job_id: string | null
   jd_text: string
   status: ApplicationStatus
   ats_score: number | null
@@ -69,14 +71,15 @@ export function createApplication(data: {
   company: string
   role: string
   jd_url?: string
+  job_id?: string
   jd_text: string
 }): Application {
   const db = getDb()
   return db.prepare(`
-    INSERT INTO applications (slug, company, role, jd_url, jd_text, status)
-    VALUES (@slug, @company, @role, @jd_url, @jd_text, 'pending')
+    INSERT INTO applications (slug, company, role, jd_url, job_id, jd_text, status)
+    VALUES (@slug, @company, @role, @jd_url, @job_id, @jd_text, 'pending')
     RETURNING *
-  `).get({ jd_url: null, ...data }) as Application
+  `).get({ jd_url: null, job_id: null, ...data }) as Application
 }
 
 export function listApplications(): Application[] {
