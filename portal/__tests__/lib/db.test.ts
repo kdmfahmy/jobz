@@ -54,3 +54,30 @@ test('updateApplication updates fields and returns updated row', () => {
   expect(updated?.status).toBe('generated')
   expect(updated?.ats_score).toBe(87)
 })
+
+test('createApplication defaults cover_letter and web_research to off', () => {
+  const app = createApplication({ slug: 'c', company: 'C', role: 'Dev', jd_text: 'jd' })
+  expect(app.cover_letter).toBe(0)
+  expect(app.web_research).toBe(0)
+})
+
+test('createApplication persists cover_letter and web_research when requested', () => {
+  const app = createApplication({
+    slug: 'd',
+    company: 'D',
+    role: 'Dev',
+    jd_text: 'jd',
+    cover_letter: true,
+    web_research: true,
+  })
+  expect(app.cover_letter).toBe(1)
+  expect(app.web_research).toBe(1)
+  expect(getApplication(app.id)!.cover_letter).toBe(1)
+  expect(getApplication(app.id)!.web_research).toBe(1)
+})
+
+test('updateApplication can toggle cover_letter at generate time', () => {
+  const app = createApplication({ slug: 'e', company: 'E', role: 'Dev', jd_text: 'jd' })
+  const updated = updateApplication(app.id, { status: 'generating', cover_letter: 1 })
+  expect(updated!.cover_letter).toBe(1)
+})

@@ -17,11 +17,11 @@ Use the following preamble exactly:
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
-% No paragraph indentation — prevents indent drift after itemize blocks
+% No paragraph indentation - prevents indent drift after itemize blocks
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0pt}
 
-% Tight list spacing — critical for 1-page fit
+% Tight list spacing - critical for 1-page fit
 \setlist[itemize]{noitemsep, topsep=2pt, parsep=0pt, leftmargin=1.2em}
 
 % Tight section spacing
@@ -40,7 +40,7 @@ After `\begin{document}`, add `\raggedright` to use left-aligned text throughout
 
 ```latex
 {\fontsize{14}{16}\selectfont\textbf{Khaled Afifi}}\\[3pt]
-\faEnvelope\ \href{mailto:kdmfahmy@gmail.com}{kdmfahmy@gmail.com} \quad
+\faEnvelope\ \href{mailto:kdmafifi@gmail.com}{kdmafifi@gmail.com} \quad
 \faPhone\ +971 566 292 118 \quad
 \faLinkedinSquare\ \href{https://linkedin.com/in/khaled-afifi-9469221aa}{linkedin.com/in/khaled-afifi-9469221aa} \quad
 \faMapMarker\ Dubai, UAE
@@ -51,7 +51,7 @@ After `\begin{document}`, add `\raggedright` to use left-aligned text throughout
 **Golden Visa (conditional):** for UAE/GCC-located roles ONLY, the contact line's location segment becomes:
 
 ```latex
-\faMapMarker\ Dubai, UAE --- UAE Golden Visa
+\faMapMarker\ Dubai, UAE \quad UAE Golden Visa
 ```
 
 For all other locations (or when the role location is unknown), keep `\faMapMarker\ Dubai, UAE` unchanged. The education-line Golden Visa mention stays in every CV regardless.
@@ -110,7 +110,7 @@ Rules:
 Education must fit on two lines at most — degree name and year on line 1, institution on line 2:
 ```latex
 \noindent\textbf{Degree Name} \hfill \textit{Mon YYYY -- Mon YYYY}\\
-Institution Name --- GPA: X.XX / 4.0 \quad UAE Golden Visa recipient for academic achievement
+Institution Name \quad GPA: X.XX / 4.0 \quad UAE Golden Visa recipient for academic achievement
 ```
 Use the full date range (e.g. `Sep 2017 -- Jan 2022`), not just the graduation year — consistent with the job entry date format.
 Include GPA inline on the institution line, left-aligned (no `\hfill`).
@@ -149,6 +149,7 @@ Before saving the .tex file, verify every item below. Do not skip any check.
 - [ ] All role entries use identical LaTeX structure (same line pattern, same `\hfill` usage)
 - [ ] No section has different spacing treatment than others
 - [ ] No headline/subtitle line under the name — contact line follows the name directly
+- [ ] No em dashes (—), en dashes (–), `---`, or non-date `--` anywhere in visible text — the AI tell; use commas, parentheses, `\quad`, or a new clause (date ranges keep `--`; compound-word hyphens are fine)
 - [ ] Golden Visa appears on the contact line ONLY for UAE/GCC-located roles; education-line mention present in all cases
 
 ## Content Volume Limits (enforce strictly)

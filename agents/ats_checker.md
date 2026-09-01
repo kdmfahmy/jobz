@@ -4,7 +4,7 @@ You are an independent ATS (Applicant Tracking System) evaluator. You score CVs 
 
 ## Input
 - **CV file:** `applications/{APP_ID}-{SLUG}/cv.tex` — read this; score the text content (ignore LaTeX commands when checking for keywords — check the rendered text they produce)
-- **Cover letter file:** `applications/{APP_ID}-{SLUG}/cover_letter.tex` — read this for the cover letter checks below
+- **Cover letter file:** `applications/{APP_ID}-{SLUG}/cover_letter.tex` — read this for the cover letter checks below. **This file is optional** — cover letters are generated only on request. If it does not exist, that is normal: skip step 3 entirely and never flag its absence as a gap.
 - **Brief file:** `applications/{APP_ID}-{SLUG}/brief.md` — read this; the ATS Keyword List is the canonical list to score against
 - **Rubric:** `templates/ats_rubric.md` — follow this exactly
 - **Base profile:** `profile/base_profile.md` — the source of truth for what the candidate actually did; used ONLY for the defensibility verification below (never to suggest content beyond it)
@@ -33,7 +33,9 @@ If `{PAGES}` is `unknown` (compilation failed), fall back to structural estimati
 - Any older role has more than 2 bullets, OR
 - The summary is more than 2 lines
 
-### 3. Check cover letter length and structure
+### 3. Check cover letter length and structure (only if the file exists)
+
+If `applications/{APP_ID}-{SLUG}/cover_letter.tex` does not exist, skip this entire step — a missing cover letter is never a gap.
 
 Read `applications/{APP_ID}-{SLUG}/cover_letter.tex`. Extract only the body paragraphs (everything between the subject line and the sign-off, excluding `\vspace`, `\textbf{Re:...}`, and the closing `Sincerely` block).
 
@@ -48,6 +50,7 @@ Include any cover letter issues as CRITICAL gaps — they block submission the s
 Before scoring, check the CV for anything that would make it unfit for submission. Flag every issue found as **CRITICAL** in the GAPS TO FIX section — these block submission regardless of ATS score.
 
 **Content artifacts:**
+- **AI-punctuation tell:** any em dash (—) or en dash (–) in the CV's visible text (summary, bullets, Skills), or a `--` used outside a date range. Date ranges (`May 2025 -- Present`) and hyphens inside compound words (e-invoicing, multi-currency) are fine. Flag each occurrence as CRITICAL with the exact text — reviewers read the em dash as AI-generated (candidate feedback, 2026-08-30). The same rule already applies to the cover letter body via its style guide; flag violations there too.
 - **Bracket artifacts:** any `[`, `]` appearing as placeholders or unfilled instructions (e.g. `[ESTIMATE`, `[FILL IN`, `[Team Name`, `[Company`, `[TODO`)
 - **Unfilled template variables:** `{SLUG}`, `{APP_ID}`, `{GAPS}`, `{FEEDBACK}`, or any other `{...}` pattern
 - **First-person pronouns in bullets:** "I ", "my ", "me ", "we ", "our "

@@ -419,7 +419,13 @@ export function readIterationHistory(appId: number, slug: string): PipelineRun[]
   return runs
 }
 
-export function spawnPipeline(applicationId: number, jdInput: string, webResearch = false, skipAnalysis = false): void {
+export function spawnPipeline(
+  applicationId: number,
+  jdInput: string,
+  webResearch = false,
+  skipAnalysis = false,
+  coverLetter = false
+): void {
   const projectDir = projectRoot()
   const applyMd = fs.readFileSync(
     path.join(projectDir, '.claude/commands/apply.md'),
@@ -428,6 +434,7 @@ export function spawnPipeline(applicationId: number, jdInput: string, webResearc
   const prompt = applyMd
     .replace(/\$ARGUMENTS/g, jdInput)
     .replace(/\$WEB_RESEARCH/g, webResearch ? 'enabled' : 'disabled')
+    .replace(/\$COVER_LETTER/g, coverLetter ? 'enabled' : 'disabled')
     .replace(/\$SKIP_ANALYSIS/g, skipAnalysis ? 'true' : 'false')
     .replace(/\$APP_ID/g, String(applicationId))
 

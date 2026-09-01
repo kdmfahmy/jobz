@@ -29,7 +29,13 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
 
   appendPipelineLog(app.id, `\n[RESTART: ${new Date().toISOString()}]\n`)
   updateApplication(app.id, { status: 'generating', pid: null })
-  spawnPipeline(app.id, app.jd_text || (app.jd_url ?? ''), false, briefExists)
+  spawnPipeline(
+    app.id,
+    app.jd_text || (app.jd_url ?? ''),
+    app.web_research === 1,
+    briefExists,
+    app.cover_letter === 1
+  )
 
   return NextResponse.json({ ok: true })
 }

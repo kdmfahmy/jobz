@@ -23,6 +23,9 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
   const projectDir = process.env.PROJECT_ROOT ?? path.resolve(process.cwd(), '..')
   const briefPath = path.join(projectDir, 'applications', `${id}-${app.slug}`, 'brief.md')
   const briefText = fs.existsSync(briefPath) ? fs.readFileSync(briefPath, 'utf-8') : null
+  const hasCoverLetter = fs.existsSync(
+    path.join(projectDir, 'applications', `${id}-${app.slug}`, 'cover_letter.tex')
+  )
   const keywordGroups = briefText ? parseKeywordsFromBrief(briefText) : []
   const pipelineLog = readPipelineLog(app.id)
   const matchedKeywords = parseMatchedKeywords(pipelineLog)
@@ -48,7 +51,13 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           {app.status !== 'generating' && (
             <StatusSelect id={app.id} current={app.status} />
           )}
-          {app.status === 'pending' && <GenerateButton id={app.id} />}
+          {app.status === 'pending' && (
+            <GenerateButton
+              id={app.id}
+              defaultCoverLetter={app.cover_letter === 1}
+              defaultWebResearch={app.web_research === 1}
+            />
+          )}
           {hasIterations && (
             <Link
               href={`/applications/${id}/iterations`}
@@ -96,7 +105,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       {app.status === 'pending' ? (
         <div className="flex gap-3 mb-5">
           <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4 text-center text-slate-500 text-sm">
-            Hit <span className="text-slate-300 font-semibold">Generate CV & Cover Letter</span> to start the pipeline.
+            Hit <span className="text-slate-300 font-semibold">Generate</span> to start the pipeline. Tick <span className="text-slate-300 font-semibold">Cover letter</span> first if you want one.
           </div>
         </div>
       ) : app.status === 'generating' ? (
@@ -119,7 +128,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
           <div className="flex-1 bg-[#141414] border border-slate-800 rounded-lg p-4">
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Documents</div>
             <div className="flex flex-col gap-2">
-              {[['CV', 'cv'], ['Cover Letter', 'cover_letter']].map(([label, file]) => (
+              {[['CV', 'cv'], ...(hasCoverLetter ? [['Cover Letter', 'cover_letter']] : [])].map(([label, file]) => (
                 <div key={file} className="bg-slate-800 rounded-lg flex items-center justify-between" style={{ padding: '10px 14px' }}>
                   <span className="text-sm font-semibold text-slate-200">{label}</span>
                   <div className="flex gap-1.5">
@@ -143,6 +152,11 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
                 </div>
               ))}
             </div>
+            {!hasCoverLetter && (
+              <p className="text-xs text-slate-600 mt-2">
+                No cover letter — ask for one in the Revise box below.
+              </p>
+            )}
           </div>
         </div>
       )}

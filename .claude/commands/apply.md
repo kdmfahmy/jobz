@@ -9,6 +9,10 @@ You are the orchestrator for a 3-agent job application pipeline. Your job is to 
 **Skip analysis:** $SKIP_ANALYSIS
 **App ID:** $APP_ID
 
+**Cover letter:** $COVER_LETTER
+
+**Cover letter flag:** the cover letter is OFF by default. Set `COVER_LETTER=true` if any of these hold: the value above is `enabled` (the portal toggle), the job input contains `--cover-letter` (strip the flag from the job input before passing it to the Analyzer), or the user explicitly asked for a cover letter in this run. If the value above is still the literal `$COVER_LETTER` placeholder, this run came from the CLI — ignore it and judge by the flag and the user's request alone. When false, the pipeline produces the CV only — a cover letter can always be generated later with `/revise`.
+
 ---
 
 ## Phase 0 — Register in portal
@@ -41,7 +45,7 @@ Replace `{SLUG}` with a slug you derive from the company and role (lowercase keb
 Replace `{APP_ID}` with: $APP_ID
 Replace `{WEB_RESEARCH}` with: $WEB_RESEARCH
 
-Spawn the **Analyzer Agent** using the Agent tool with the fully constructed analyzer prompt. The agent has access to all tools (WebFetch, Read, Write, Bash).
+Spawn the **Analyzer Agent** using the Agent tool with the fully constructed analyzer prompt and `model: "sonnet"` (analysis is extraction work — the cheaper model handles it well and saves tokens). The agent has access to all tools (WebFetch, Read, Write, Bash).
 
 Wait for the Analyzer to complete. It will:
 - Fetch the JD if a URL was provided
@@ -140,6 +144,7 @@ Read the file `agents/writer.md`.
 Replace `{SLUG}` with the confirmed slug from Phase 1.
 Replace `{APP_ID}` with: $APP_ID
 Replace `{GAPS}` with: *(empty — this is iteration 1)*
+Replace `{COVER_LETTER}` with: `true` or `false` per the cover letter flag above
 
 ```bash
 python3 -c "
@@ -153,14 +158,14 @@ Spawn the **Writer Agent** using the Agent tool with the fully constructed write
 
 Wait for the Writer to complete. It will:
 - Write `applications/$APP_ID-{SLUG}/cv.tex`
-- Write `applications/$APP_ID-{SLUG}/cover_letter.tex`
+- Write `applications/$APP_ID-{SLUG}/cover_letter.tex` (only if the cover letter flag is true)
 - Return a summary of keywords targeted and any placeholders used
 
 ---
 
 ## Phase 3 — ATS Feedback Loop
 
-Run up to **3 iterations** of the following loop:
+Run up to **2 iterations** of the following loop (initial check, at most one gap-fix revision, final check):
 
 ### Check
 
@@ -168,7 +173,7 @@ Read the file `agents/ats_checker.md`.
 
 Replace `{SLUG}` with the confirmed slug.
 Replace `{APP_ID}` with: $APP_ID
-Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
+Replace `{ITERATION}` with the current iteration number (1 or 2).
 
 Compile the CV and capture the page count, then replace `{PAGES}` in the checker prompt with the result (just the number, e.g. `1` or `2`; use `unknown` if pdfinfo fails):
 
@@ -183,7 +188,7 @@ tectonic applications/$APP_ID-$SLUG/cv.tex --outdir applications/$APP_ID-$SLUG/ 
 pdfinfo applications/$APP_ID-$SLUG/cv.pdf 2>/dev/null | grep "^Pages:" || echo "Pages: unknown"
 ```
 
-Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted). The agent has access to Read and Bash tools only — it does not write files.
+Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted) and `model: "sonnet"` (scoring against a rubric — the cheaper model handles it well). The agent has access to Read and Bash tools only — it does not write files.
 
 Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
 
@@ -236,7 +241,7 @@ After each Checker run, determine three things independently:
 **Exit condition:** all three must be true. If any fails, treat it as a revision needed. A score ≥ 80 does NOT override a CRITICAL gap — a CRITICAL gap always forces another revision iteration, never a soft note to the user.
 
 - If **ATS pass AND page pass AND CRITICAL pass**: exit the loop. Proceed to Phase 4.
-- If **any fails AND iterations < 3**: extract the GAPS TO FIX section from the Checker's report. Append a heartbeat:
+- If **any fails AND iterations < 2**: extract the GAPS TO FIX section from the Checker's report. Append a heartbeat:
 
   ```bash
   python3 -c "
@@ -247,15 +252,15 @@ After each Checker run, determine three things independently:
   " "$ITERATION" 2>/dev/null || true
   ```
 
-  Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID). Then run the Checker again. Increment iteration count.
-- If **any fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below if a PAGE OVERFLOW remains. If a CRITICAL gap remains after iteration 3 (with no overflow), do not enter the trim loop — proceed to Phase 4 but treat the unresolved CRITICAL exactly like an unresolved overflow: surface it as a prominent **blocking** warning in the final report (not a soft "review this" note), and mark the application as needing manual fix before submission.
+  Spawn the **Writer Agent** again (read `agents/writer.md`, replace `{GAPS}` with the full GAPS TO FIX list, replace `{SLUG}` with the confirmed slug, replace `{APP_ID}` with: $APP_ID, replace `{COVER_LETTER}` with `false` — gap iterations are CV-only). Then run the Checker again. Increment iteration count.
+- If **any fails AND iterations = 2**: exit the ATS loop and enter the **trim loop** below if a PAGE OVERFLOW remains. If a CRITICAL gap remains after iteration 2 (with no overflow), do not enter the trim loop — proceed to Phase 4 but treat the unresolved CRITICAL exactly like an unresolved overflow: surface it as a prominent **blocking** warning in the final report (not a soft "review this" note), and mark the application as needing manual fix before submission.
 
 ### Trim loop (page compliance enforcement)
 
 If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
 
 1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page. It must **prefer compressing or merging bullets over deleting them** — condensing two bullets into one tight line preserves keywords; outright deletion loses them. When a bullet must be cut, cut bullets that contain no ATS keywords from the brief first. Only cut keyword-bearing bullets as a last resort, and when doing so, try to fold the keyword into a surviving bullet rather than losing it entirely. **It must never delete the people-leadership bullet of a leadership-titled role; if trimming would leave a leadership-titled role with no people-leadership signal, condense that bullet or fold the team-size/mentorship signal into another bullet instead of deleting it** (see the precedence rule in `agents/writer.md`).
-2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
+2. Spawn the **ATS Checker Agent** with `model: "sonnet"` (increment iteration count for reporting).
 3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
 4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
 5. If PAGE OVERFLOW persists after 3 trim passes: proceed to Phase 4 with a prominent warning that the CV could not be trimmed to 1 page automatically — the user must review and trim manually before submitting.
@@ -278,16 +283,18 @@ with open(f'.pipeline-logs/$APP_ID.log', 'a') as f:
 " 2>/dev/null || true
 ```
 
-Run the following commands:
+Run the following commands (skip the cover letter lines entirely when the cover letter flag is false — `cover_letter.tex` will not exist):
 
 ```bash
 tectonic applications/$APP_ID-{SLUG}/cv.tex --outdir applications/$APP_ID-{SLUG}/
-tectonic applications/$APP_ID-{SLUG}/cover_letter.tex --outdir applications/$APP_ID-{SLUG}/
 rm -f applications/$APP_ID-{SLUG}/cv.aux applications/$APP_ID-{SLUG}/cv.log applications/$APP_ID-{SLUG}/cv.out
+
+# Only if the cover letter flag is true:
+tectonic applications/$APP_ID-{SLUG}/cover_letter.tex --outdir applications/$APP_ID-{SLUG}/
 rm -f applications/$APP_ID-{SLUG}/cover_letter.aux applications/$APP_ID-{SLUG}/cover_letter.log applications/$APP_ID-{SLUG}/cover_letter.out
 ```
 
-After both tectonic commands succeed, overwrite the cv.pdf in the latest snapshot directory with the freshly compiled one. The last iteration number is the total number of ATS checks run (including any trim-loop iterations). Run:
+After the tectonic command(s) succeed, overwrite the cv.pdf in the latest snapshot directory with the freshly compiled one. The last iteration number is the total number of ATS checks run (including any trim-loop iterations). Run:
 
 ```bash
 python3 -c "
@@ -379,8 +386,9 @@ Score history: [e.g. 68 → 77 → 83]
 GENERATED FILES
   applications/$APP_ID-{SLUG}/cv.tex
   applications/$APP_ID-{SLUG}/cv.pdf
-  applications/$APP_ID-{SLUG}/cover_letter.tex
-  applications/$APP_ID-{SLUG}/cover_letter.pdf
+  [cover_letter.tex / cover_letter.pdf — list these two lines only if the
+   cover letter flag was true; otherwise add the line:
+   "Cover letter: skipped (request one anytime with /revise)"]
 
 ────────────────────────────────────────
 ⛔ BLOCKING — FIX BEFORE SUBMITTING

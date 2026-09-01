@@ -40,6 +40,9 @@ function initSchema(db: Database.Database) {
   `)
   try { db.exec('ALTER TABLE applications ADD COLUMN pid INTEGER') } catch {}
   try { db.exec('ALTER TABLE applications ADD COLUMN job_id TEXT') } catch {}
+  // Pipeline options chosen per application. Stored as 0/1 — SQLite has no boolean.
+  try { db.exec('ALTER TABLE applications ADD COLUMN cover_letter INTEGER NOT NULL DEFAULT 0') } catch {}
+  try { db.exec('ALTER TABLE applications ADD COLUMN web_research INTEGER NOT NULL DEFAULT 0') } catch {}
 }
 
 export type ApplicationStatus =
@@ -62,6 +65,8 @@ export interface Application {
   iterations: string | null
   log: string
   pid: number | null
+  cover_letter: number
+  web_research: number
   created_at: string
   updated_at: string
 }
@@ -73,13 +78,22 @@ export function createApplication(data: {
   jd_url?: string
   job_id?: string
   jd_text: string
+  cover_letter?: boolean
+  web_research?: boolean
 }): Application {
   const db = getDb()
+  const { cover_letter, web_research, ...rest } = data
   return db.prepare(`
-    INSERT INTO applications (slug, company, role, jd_url, job_id, jd_text, status)
-    VALUES (@slug, @company, @role, @jd_url, @job_id, @jd_text, 'pending')
+    INSERT INTO applications (slug, company, role, jd_url, job_id, jd_text, status, cover_letter, web_research)
+    VALUES (@slug, @company, @role, @jd_url, @job_id, @jd_text, 'pending', @cover_letter, @web_research)
     RETURNING *
-  `).get({ jd_url: null, job_id: null, ...data }) as Application
+  `).get({
+    jd_url: null,
+    job_id: null,
+    ...rest,
+    cover_letter: cover_letter ? 1 : 0,
+    web_research: web_research ? 1 : 0,
+  }) as Application
 }
 
 export function listApplications(): Application[] {

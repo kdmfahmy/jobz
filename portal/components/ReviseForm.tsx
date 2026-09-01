@@ -37,7 +37,7 @@ export function ReviseForm({ id }: { id: number }) {
       <textarea
         value={feedback}
         onChange={e => setFeedback(e.target.value)}
-        placeholder="e.g. The summary is too generic, tone down the leadership emphasis, remove the Odoo R&D bullet..."
+        placeholder="e.g. The summary is too generic, tone down the leadership emphasis, remove the Odoo R&D bullet, write the cover letter..."
         rows={3}
         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none mb-3"
       />
@@ -59,7 +59,7 @@ export function ReviseForm({ id }: { id: number }) {
           {loading ? (
             <><span className="animate-spin inline-block">⟳</span> Starting revision…</>
           ) : (
-            '↺ Revise CV & Cover Letter'
+            '↺ Revise'
           )}
         </button>
         {error && <p className="text-xs text-red-400">{error}</p>}

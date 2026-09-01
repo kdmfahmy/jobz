@@ -12,6 +12,7 @@ export default function NewApplicationPage() {
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
   const [webResearch, setWebResearch] = useState(false)
+  const [coverLetter, setCoverLetter] = useState(false)
   const [jdHeight, setJdHeight] = useState(200)
   const jdRef = useRef<HTMLTextAreaElement>(null)
 
@@ -74,7 +75,7 @@ export default function NewApplicationPage() {
       const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined, job_id: jobId || undefined, web_research: webResearch }),
+        body: JSON.stringify({ company, role, jd_text: jdText, jd_url: jdUrl || undefined, job_id: jobId || undefined, web_research: webResearch, cover_letter: coverLetter }),
       })
       if (!res.ok) {
         let errMsg = 'Failed to create application'
@@ -200,11 +201,30 @@ export default function NewApplicationPage() {
           <button
             type="button"
             role="switch"
+            aria-label="Web research"
             aria-checked={webResearch}
             onClick={() => setWebResearch(v => !v)}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${webResearch ? 'bg-blue-600' : 'bg-slate-700'}`}
           >
             <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${webResearch ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {/* Cover letter toggle */}
+        <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-[#141414] px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-slate-300">Cover letter</p>
+            <p className="text-xs text-slate-500 mt-0.5">Off by default — the CV alone is enough for most applications. You can still ask for one later from the application page.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-label="Cover letter"
+            aria-checked={coverLetter}
+            onClick={() => setCoverLetter(v => !v)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${coverLetter ? 'bg-blue-600' : 'bg-slate-700'}`}
+          >
+            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${coverLetter ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 # /revise — CV Revision Orchestrator
 
-You are the orchestrator for a targeted CV revision. The CV and cover letter have already been generated. Your job is to apply user feedback, run the ATS loop, and recompile — without re-running the Analyzer.
+You are the orchestrator for a targeted CV revision. The CV has already been generated (a cover letter may or may not exist — they are generated only on request). Your job is to apply user feedback, run the ATS loop, and recompile — without re-running the Analyzer.
 
 **Slug:** {SLUG}
 **App ID:** {APP_ID}
@@ -79,7 +79,7 @@ Read the file `agents/writer.md`.
 
 **Before spawning the Writer, determine the revision scope from the feedback:**
 
-- **Cover letter only** — feedback explicitly refers to the cover letter, its structure, tone, opening, body paragraphs, closing, or cover-letter-specific style rules (e.g. "revise the cover letter", "fix the opening", "the body paragraph is wrong", "add a transition")
+- **Cover letter only** — feedback explicitly refers to the cover letter, its structure, tone, opening, body paragraphs, closing, or cover-letter-specific style rules (e.g. "revise the cover letter", "fix the opening", "the body paragraph is wrong", "add a transition"). This includes a request to **create** the cover letter when none exists yet (e.g. "write the cover letter") — the Writer generates it fresh from the existing `cv.tex`.
 - **CV only** — feedback explicitly refers to the CV, its bullets, sections, formatting, or CV-specific concerns (e.g. "update the CV", "change this bullet", "fix the summary section")
 - **Both** — feedback corrects a factual error, wrong claim, incorrect information, or a specific topic/achievement that may appear in both documents (e.g. "the team size is wrong", "change X to Y everywhere", "the FTA project description is inaccurate")
 
@@ -89,6 +89,7 @@ Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
 Replace `{FEEDBACK}` with: {FEEDBACK}
 Replace `{GAPS}` with: *(empty — this is iteration 1)*
+Replace `{COVER_LETTER}` with: `false` (revisions are scope-driven — the Writer touches the cover letter only when the feedback targets it)
 
 ```bash
 python3 -c "
@@ -106,7 +107,7 @@ Wait for the Writer to complete.
 
 ## Phase 3 — ATS Feedback Loop
 
-Run up to **3 iterations** of the following loop:
+Run up to **2 iterations** of the following loop (initial check, at most one gap-fix revision, final check):
 
 ### Check
 
@@ -114,7 +115,7 @@ Read the file `agents/ats_checker.md`.
 
 Replace `{SLUG}` with: {SLUG}
 Replace `{APP_ID}` with: {APP_ID}
-Replace `{ITERATION}` with the current iteration number (1, 2, or 3).
+Replace `{ITERATION}` with the current iteration number (1 or 2).
 
 Compile the CV and capture the page count, then replace `{PAGES}` in the checker prompt with the result (just the number, e.g. `1` or `2`; use `unknown` if pdfinfo fails):
 
@@ -129,7 +130,7 @@ tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLU
 pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf 2>/dev/null | grep "^Pages:" || echo "Pages: unknown"
 ```
 
-Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted). The agent has access to Read and Bash tools only.
+Spawn the **ATS Checker Agent** using the Agent tool with the fully constructed checker prompt (with `{PAGES}` substituted) and `model: "sonnet"` (scoring against a rubric — the cheaper model handles it well). The agent has access to Read and Bash tools only.
 
 Wait for the Checker to complete. It will return a structured score report with a total score and a GAPS TO FIX section.
 
@@ -182,7 +183,7 @@ After each Checker run, determine two things independently:
 **Exit condition:** both must be true. If either fails, treat it as a revision needed.
 
 - If **ATS pass AND page pass**: exit the loop. Proceed to Phase 4.
-- If **either fails AND iterations < 3**: extract the GAPS TO FIX section. Append a heartbeat:
+- If **either fails AND iterations < 2**: extract the GAPS TO FIX section. Append a heartbeat:
 
   ```bash
   python3 -c "
@@ -193,15 +194,15 @@ After each Checker run, determine two things independently:
   " "{ITERATION}" 2>/dev/null || true
   ```
 
-  Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1). Then run the Checker again. Increment iteration count.
-- If **either fails AND iterations = 3**: exit the ATS loop and enter the **trim loop** below.
+  Spawn the **Writer Agent** again — replace `{GAPS}` with the full GAPS TO FIX list, replace `{FEEDBACK}` with empty (user feedback already applied in iteration 1), replace `{COVER_LETTER}` with `false`. Then run the Checker again. Increment iteration count.
+- If **either fails AND iterations = 2**: exit the ATS loop and enter the **trim loop** below.
 
 ### Trim loop (page compliance enforcement)
 
 If a PAGE OVERFLOW exists after the ATS loop, run this loop — up to **3 additional trim passes**:
 
 1. Spawn the **Writer Agent** with the overflow gap only: instruct it to trim the CV to exactly 1 page. It must **prefer compressing or merging bullets over deleting them** — condensing two bullets into one tight line preserves keywords; outright deletion loses them. When a bullet must be cut, cut bullets that contain no ATS keywords from the brief first. Only cut keyword-bearing bullets as a last resort, and when doing so, try to fold the keyword into a surviving bullet rather than losing it entirely.
-2. Spawn the **ATS Checker Agent** (increment iteration count for reporting).
+2. Spawn the **ATS Checker Agent** with `model: "sonnet"` (increment iteration count for reporting).
 3. If no PAGE OVERFLOW in the result: exit the trim loop. Proceed to Phase 4.
 4. If PAGE OVERFLOW persists and trim passes < 3: repeat from step 1.
 5. If PAGE OVERFLOW persists after 3 trim passes: proceed to Phase 4 with a prominent warning that the CV could not be trimmed to 1 page automatically — the user must review and trim manually before submitting.
@@ -331,8 +332,7 @@ Score history: [e.g. 68 → 77 → 83]
 GENERATED FILES
   applications/{APP_ID}-{SLUG}/cv.tex
   applications/{APP_ID}-{SLUG}/cv.pdf
-  applications/{APP_ID}-{SLUG}/cover_letter.tex
-  applications/{APP_ID}-{SLUG}/cover_letter.pdf
+  [cover_letter.tex / cover_letter.pdf — list only if the cover letter exists]
 
 ────────────────────────────────────────
 BEFORE YOU SEND — REVIEW THESE

@@ -26,6 +26,7 @@ If a JD label fails the test (e.g. "Machine Learning Engineer" with no ML delive
 - **Cover letter style guide:** `templates/cover_letter_style.md`
 - **Revision gaps (if this is iteration 2+):** {GAPS}
 - **User feedback (if this is a user-requested revision):** {FEEDBACK}
+- **Cover letter requested:** {COVER_LETTER} — on a fresh generation, write `cover_letter.tex` only when this is `true`. If it is `false` or empty, skip step 8 entirely and read the cover letter style guide only if you are actually writing a letter.
 
 ## Instructions
 
@@ -171,11 +172,11 @@ Each Odoo role has a distinct title; writing the same title for two consecutive 
 
 If this is a revision ({FEEDBACK} or {GAPS} is not empty), determine which files to write:
 
-- **Feedback targets the cover letter specifically** (opening, body paragraphs, closing, tone, structure, style-guide rules) → write `cover_letter.tex` only. Do not regenerate `cv.tex`.
+- **Feedback targets the cover letter specifically** (opening, body paragraphs, closing, tone, structure, style-guide rules) → write `cover_letter.tex` only. Do not regenerate `cv.tex`. If `cover_letter.tex` does not exist yet (the application was generated without one), this is a request to create it — write it fresh from the existing `cv.tex` per step 8.
 - **Feedback targets the CV specifically** (bullets, sections, formatting, summary) → write `cv.tex` only. Do not regenerate `cover_letter.tex`.
 - **Feedback corrects a factual error or wrong information** (team size, project name, dates, a claim that is wrong) → apply the fix to every file where that information appears. If it appears in both `cv.tex` and `cover_letter.tex`, fix both.
 - **{GAPS} is not empty (ATS gap iteration)** → these gaps are always CV-only. Write `cv.tex` only. Do not regenerate `cover_letter.tex` unless a gap explicitly concerns the cover letter.
-- **Fresh generation (both {FEEDBACK} and {GAPS} are empty)** → write both files.
+- **Fresh generation (both {FEEDBACK} and {GAPS} are empty)** → write `cv.tex`; also write `cover_letter.tex` only if {COVER_LETTER} is `true`.
 
 Never touch a file that is not in scope for this revision.
 
@@ -201,6 +202,7 @@ Before writing, plan the content budget:
 - If it won't fit, trim from the least recent role first — cut sections (Projects, certifications) before thinning roles below their minimums — but never cut the people-leadership bullet of a leadership-titled role (condense it instead, per the precedence rule above)
 
 Tailoring rules:
+- **Punctuation tell (candidate feedback, 2026-08-30): no em dashes (—) or en dashes (–) anywhere in the CV's visible text** — not in the summary, bullets, or Skills section. A reviewer flagged the em dash as the giveaway that a CV is AI-generated. Where you would reach for a dash, use a comma, parentheses, or split into a second clause. Exceptions: date ranges (`May 2025 -- Present`) keep the standard LaTeX `--`, and hyphens inside compound words (e-invoicing, multi-currency, 1-page) are fine — the ban is on dashes used to join or introduce clauses.
 - Every keyword from the **ATS Keyword List** in the brief must appear somewhere in the CV — weave them naturally into bullets and the summary; never keyword-stuff
 - **Language must sound like the candidate, not the JD and not a template.** Read each bullet and ask: could this sentence have been lifted from the job posting? If yes, rewrite it from the candidate's experience angle. Bullets should describe *what was done and how*, not *what the role requires*. The voice calibration from the cover letter applies here too — reframings must sound like the candidate's natural way of expressing their work, not like a polished rewrite from an outside writer
 - Use the **Success Profile** and **Company Intelligence** sections from the brief to tune the professional summary and bullet emphasis — speak the company's language
@@ -212,7 +214,7 @@ Tailoring rules:
 - When a bullet would benefit from a quantity that isn't in the profile, use natural non-quantified language instead (e.g. "multiple clients", "several projects", "a team of engineers") — never fabricate a number, never use placeholder brackets
 - If a required field is missing from the profile, omit it if optional; if it's non-optional (e.g. contact detail), note it in the summary under Fill-ins needed but do not put any placeholder text in the document itself
 - **Career narrative coherence:** the CV must read as a logical progression. If a title signals leadership (e.g. "Team Lead"), at least one bullet in that role must show **people leadership** — team size, mentorship, direct reports, or hiring. Project ownership verbs ("Directed", "Led a project", "Owned delivery") do not count — they describe technical work, not people management. Never let team size or people leadership appear for the first time in the most senior role when an earlier role already had a leadership title — that implies the candidate never led anyone until their last job, contradicting the earlier title. The reader must see leadership established at the earliest role it applied to, then growing from there.
-- **Team leadership is a role, not a project:** never write "Led a team to deliver [single project]" — it reduces the team to a side-effect of one deliverable. Team leadership is an ongoing responsibility; specific projects are what the team shipped. Express it as: "Led backend engineering across [domain] — owning architecture, coordination, and delivery quality" with specific projects as separate bullets or parenthetical examples.
+- **Team leadership is a role, not a project:** never write "Led a team to deliver [single project]" — it reduces the team to a side-effect of one deliverable. Team leadership is an ongoing responsibility; specific projects are what the team shipped. Express it as: "Led backend engineering across [domain], owning architecture, coordination, and delivery quality" with specific projects as separate bullets or parenthetical examples.
 
 If user feedback is provided ({FEEDBACK} is not empty):
 - Apply the feedback faithfully and completely — this is the user's explicit instruction, highest priority
@@ -231,6 +233,7 @@ If this is a revision (GAPS is not empty):
 Before saving, run a full visual proofread of the generated LaTeX. Fix everything found — do not save until all checks pass.
 
 **Content scan:**
+- Any em dash (—) or en dash (–) in visible text, and any `--` outside a date range — rewrite with a comma, parentheses, or a new clause (the AI-punctuation tell; compound-word hyphens are fine)
 - Any square bracket artifacts: `[`, `]` used as placeholders or unfilled instructions
 - Any unfilled template variables still present: `{SLUG}`, `{APP_ID}`, `{GAPS}`, `{FEEDBACK}`, `{FILL IN}`, `{ESTIMATE}`
 - Any first-person pronouns in bullet text: "I ", "my ", "me ", "we ", "our "
@@ -249,7 +252,22 @@ If any formatting inconsistency is found, fix it before saving.
 
 Run `mkdir -p applications/{APP_ID}-{SLUG}` then save to: `applications/{APP_ID}-{SLUG}/cv.tex` — overwrite if it already exists. Never create backup copies or files with different names.
 
-### 8. Generate the Cover Letter
+**Compile and verify the page count before handing off** (whenever `cv.tex` is in scope):
+
+```bash
+tectonic applications/{APP_ID}-{SLUG}/cv.tex --outdir applications/{APP_ID}-{SLUG}/ 2>&1 | tail -3
+pdfinfo applications/{APP_ID}-{SLUG}/cv.pdf | grep "^Pages:"
+```
+
+- If compilation fails, read the error, fix the LaTeX, and recompile — never hand off a `cv.tex` that does not compile.
+- If `Pages: 1`, you are done — proceed to the next step.
+- If `Pages:` is greater than 1, trim and recompile — up to **3 attempts**. Trim per the precedence rules above: condense or merge bullets before deleting them; cut bullets without ATS keywords first; fold keywords from cut bullets into surviving ones; never delete the people-leadership bullet of a leadership-titled role (condense it instead). Save and recompile after each trim.
+- If the CV still exceeds 1 page after 3 trim attempts, hand off anyway but state it prominently in the step 9 summary: `PAGE OVERFLOW UNRESOLVED: still X pages after 3 trim attempts`.
+- If `pdfinfo` is unavailable, skip the verification (do not guess) and note `Page count unverified: pdfinfo not installed` in the summary — the orchestrator's checker pass will catch it.
+
+### 8. Generate the Cover Letter (only when in scope)
+
+Skip this step entirely when no cover letter is in scope: on a fresh generation with {COVER_LETTER} not `true`, or on a revision whose scope does not include the cover letter. A skipped cover letter is normal, not a gap — note "Cover letter: not requested" in the step 9 summary and move on.
 
 Follow `templates/cover_letter_style.md` exactly — including the "How to Write This Letter" process (identify top 3 JD needs → map to CV stories → draft in order).
 
@@ -273,10 +291,11 @@ Save to: `applications/{APP_ID}-{SLUG}/cover_letter.tex`
 
 ### 9. Output a summary
 
-After saving both files, output:
+After saving the in-scope files, output:
 ```
 CV written: applications/{APP_ID}-{SLUG}/cv.tex
-Cover letter written: applications/{APP_ID}-{SLUG}/cover_letter.tex
+Page check: 1 page verified  (or "PAGE OVERFLOW UNRESOLVED: still X pages after 3 trim attempts" / "Page count unverified: pdfinfo not installed")
+Cover letter written: applications/{APP_ID}-{SLUG}/cover_letter.tex  (or "Cover letter: not requested")
 Keywords targeted: [list the keywords from the brief that you wove into the CV]
 Defensibility calls: [summary of the audit written to applications/{APP_ID}-{SLUG}/defensibility.md — counts of claims mirrored/rejected, plus any borderline call the user should review]
 Reframings applied: [list any bullets you reframed and why]
@@ -292,6 +311,12 @@ Missing fields: [list any non-optional fields that were absent from the profile 
 - **Never claim microservices, distributed systems, or RPC-based inter-service communication in experience bullets or the summary.** The candidate's Odoo platform work is a modular monolith deployed to 2,000+ production instances — the scale comes from deployment breadth, not service topology. When a JD asks for inter-service or queue-based experience, use the one genuine service-to-service pattern in the profile: the e-invoicing proxy relay (production instances submit invoices to an Odoo-operated proxy server that queues and forwards them to the government authority). Describe it accurately as a proxy/relay integration.
 - **Skills marked "(knowledge)" or "(exposure)" in the profile** may appear in the CV Skills section only as familiarity — never woven into experience bullets as things the candidate built, deployed, or operated.
 - **The professional stack at Odoo is Python, JavaScript, and PostgreSQL (plus XML for Odoo views/QWeb) — that's it.** No other language, framework, or database may appear in a work-experience bullet or be framed as the stack used at the job (no Java, Node.js, Go, MongoDB, MySQL, Redis, etc. in Odoo bullets — ever).
+- **No technology names in the summary unless they directly serve the JD.** Naming a small set of technologies in the opening line ("in Python and PostgreSQL") reads as the ceiling of what he knows and narrows him. The summary describes what he builds (backend systems, compliance integrations, scale); the Skills section carries the stack. Name a technology in the summary only when it is a top JD requirement he genuinely has.
+- **Never name Odoo in the summary.** The employer name belongs in Work Experience only; naming it in the summary frames him as "an Odoo developer" instead of a general backend engineer. Describe the work generically (backend compliance integrations, e-invoicing platforms) and let the experience section carry the company.
+- **The summary states his real identity: backend/software engineer.** Never recast him through the JD's lens as a security engineer, systems programmer, etc. Domain specifics (ECDSA, PKI, crypto signing) belong in experience bullets and Skills, not stacked in the summary — a summary built from the JD's specialty vocabulary misrepresents the candidate. "Distributed systems" may appear in the summary only as an interest ("strong interest in distributed systems design") or in Skills as knowledge — never as work delivered. "2,000+ production instances" means Odoo client deployments (deployment breadth); never pair it with wording that implies he built distributed systems.
+- **Never write "ERP customizations" or "ERP module customizations" (candidate feedback, 2026-08-30).** It reads as a consultant configuring a vendor product and recasts him as "an ERP developer" instead of a software engineer. Describe the same work as backend engineering in named business domains: "backend modules/features in Python and PostgreSQL across accounting, invoicing, inventory, and payroll". The word "ERP" itself is allowed only when the target JD uses it first (then it is a keyword match); "customizations" is never the right noun for his work.
+- **Phrase technical facts the way an engineer would say them aloud.** No jargon-dressed constructions nobody actually says ("SSL/TLS-secured channels" → "over HTTPS", "RESTful and SOAP-style web services" → "REST and SOAP web services"). If a phrase exists only to smuggle in a keyword, put the keyword in the Skills section instead and write the bullet plainly.
+- **No proficiency tags in the Skills section by default.** Never annotate a skill with "(expert)", "(advanced)", "(proficient)", or similar unless that exact skill is a top requirement of this specific JD and the emphasis serves the application. Tagging one skill as expert implicitly downgrades every untagged skill next to it. Profile phrasing like "expert-level" is grounding for what may be claimed, not text to copy into the CV. ("(academic exposure)" / "(personal project)"-style provenance labels are honesty markers, not proficiency tags — those stay.)
 - **Skills marked "(personal experience)" in the profile** (e.g. Node.js, MongoDB, MySQL, Redis) are genuine hands-on skills and may appear freely in the CV Skills section — but they come from personal projects, not the candidate's job. Never place them in work-experience bullets.
 - Never ignore the keyword list — the ATS Checker will score against the exact same list
 - Never use first-person pronouns in CV bullets
